@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kanban Board</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen p-8">
+    <div class="flex justify-center mb-4">
+        <h1 class="text-3xl text-center font-bold mt-3 mb-6 text-gray-800">
+            📋 Task Flow
+        </h1>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 max-w-7xl mx-auto">
+        <!-- Backlog Column -->
+        <div class="kanban-column bg-red-50 p-4 rounded-xl flex flex-col h-full shadow-sm border border-gray-100">
+            <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-600">
+                <span class="text-xl">📥</span> Backlog
+            </h2>
+            <div class="tasks flex-1 min-h-[120px] space-y-2" data-status="backlog" ondragover="allowDrop(event)" ondrop="drop(event)"></div>
+            <button onclick="openModal('backlog')" class="mt-4 bg-gray-200 text-gray-600 px-4 py-2.5 rounded-lg hover:bg-gray-300 w-full transition-all text-sm font-medium">
+                ＋ Add Task
+            </button>
+        </div>
+
+        <!-- Todo Column -->
+        <div class="kanban-column bg-orange-50 p-4 rounded-xl flex flex-col h-full shadow-sm border border-gray-100">
+            <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-600">
+                <span class="text-xl">📌</span> Todo
+            </h2>
+            <div class="tasks flex-1 min-h-[120px] space-y-2" data-status="todo" ondragover="allowDrop(event)" ondrop="drop(event)"></div>
+            <button onclick="openModal('todo')" class="mt-4 bg-gray-200 text-gray-600 px-4 py-2.5 rounded-lg hover:bg-gray-300 w-full transition-all text-sm font-medium">
+                ＋ Add Task
+            </button>
+        </div>
+
+        <!-- In Progress Column -->
+        <div class="kanban-column bg-blue-50 p-4 rounded-xl flex flex-col h-full shadow-sm border border-gray-100">
+            <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-600">
+                <span class="text-xl">🚀</span> In Progress
+            </h2>
+            <div class="tasks flex-1 min-h-[120px] space-y-2" data-status="in-progress" ondragover="allowDrop(event)" ondrop="drop(event)"></div>
+            <button onclick="openModal('in-progress')" class="mt-4 bg-gray-200 text-gray-600 px-4 py-2.5 rounded-lg hover:bg-gray-300 w-full transition-all text-sm font-medium">
+                ＋ Add Task
+            </button>
+        </div>
+
+        <!-- Done Column -->
+        <div class="kanban-column bg-green-50 p-4 rounded-xl flex flex-col h-full shadow-sm border border-gray-100">
+            <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-600">
+                <span class="text-xl">✅</span> Done
+            </h2>
+            <div class="tasks flex-1 min-h-[120px] space-y-2" data-status="done" ondragover="allowDrop(event)" ondrop="drop(event)"></div>
+            <button onclick="openModal('done')" class="mt-4 bg-gray-200 text-gray-600 px-4 py-2.5 rounded-lg hover:bg-gray-300 w-full transition-all text-sm font-medium">
+                ＋ Add Task
+            </button>
+        </div>
+    </div>
+
+    <!-- Add Task Modal -->
+    <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-xl w-96 shadow-2xl border border-gray-100">
+            <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-700">
+                ✨ New Task
+            </h2>
+            <input type="text" id="taskTitle" placeholder="Task title" class="w-full mb-3 p-2.5 border border-gray-200 rounded-lg focus:ring-1 focus:ring-blue-400 focus:border-blue-400 text-sm">
+            <textarea id="taskDesc" placeholder="Task description" class="w-full mb-4 p-2.5 border border-gray-200 rounded-lg focus:ring-1 focus:ring-blue-400 focus:border-blue-400 h-24 text-sm"></textarea>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModal()" class="px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-all text-sm">
+                    Cancel
+                </button>
+                <button onclick="addTask()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-all text-sm font-medium">
+                    Add Task
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+        let draggedTask = null;
+        let currentStatus = 'backlog';
+
+        function saveTasks() {
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+            renderTasks();
+        }
+
+        function renderTasks() {
+            document.querySelectorAll('.tasks').forEach(column => {
+                const status = column.dataset.status;
+                column.innerHTML = tasks
+                    .filter(task => task.status === status)
+                    .map(task => `
+                        <div draggable="true" ondragstart="drag(event)" data-id="${task.id}" 
+                             class="task bg-white p-4 mb-2 rounded shadow-sm cursor-move">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-bold">${task.title}</h3>
+                                    <p class="text-gray-600 text-sm">${task.description}</p>
+                                </div>
+                                <button onclick="deleteTask('${task.id}')" class="text-red-500 hover:text-red-700">×</button>
+                            </div>
+                        </div>
+                    `).join('');
+            });
+        }
+
+        function openModal(status) {
+            currentStatus = status;
+            document.getElementById('modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.add('hidden');
+        }
+
+        function addTask() {
+            const title = document.getElementById('taskTitle').value;
+            const desc = document.getElementById('taskDesc').value;
+            
+            if (title) {
+                tasks.push({
+                    id: Date.now().toString(),
+                    title,
+                    description: desc,
+                    status: currentStatus
+                });
+                saveTasks();
+                closeModal();
+                document.getElementById('taskTitle').value = '';
+                document.getElementById('taskDesc').value = '';
+            }
+        }
+
+        function deleteTask(id) {
+            tasks = tasks.filter(task => task.id !== id);
+            saveTasks();
+        }
+
+        function allowDrop(ev) {
+            ev.preventDefault();
+        }
+
+        function drag(ev) {
+            const taskElement = ev.target.closest('.task');
+            draggedTask = tasks.find(task => task.id === taskElement.dataset.id);
+        }
+
+        function drop(ev) {
+            ev.preventDefault();
+            const newStatus = ev.target.closest('.tasks').dataset.status;
+            
+            if (draggedTask) {
+                draggedTask.status = newStatus;
+                saveTasks();
+            }
+        }
+
+        // Initial render
+        renderTasks();
+    </script>
+</body>
+</html>
