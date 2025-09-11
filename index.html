@@ -1,222 +1,271 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kanban Board</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Kanban Board</title>
+
+  <!-- Evita "flash" aplicando o tema salvo/sistema antes de renderizar -->
+  <script>
+    (() => {
+      try {
+        const saved = localStorage.getItem('theme');
+        const isDark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (isDark) document.documentElement.classList.add('dark');
+      } catch {}
+    })();
+  </script>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' };
+  </script>
 </head>
-<body class="bg-gray-50 min-h-screen p-8">
-    <div class="flex justify-center mb-4">
-        <h1 class="text-3xl text-center font-bold mt-3 mb-6 text-gray-800">
-            📋 Task Flow
-        </h1>
+<body class="bg-gray-50 dark:bg-gray-950 min-h-screen p-8 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+  <div class="flex items-center justify-between max-w-7xl mx-auto mb-4">
+    <h1 class="text-3xl font-bold mt-3 mb-6 text-gray-800 dark:text-gray-100">
+      📋 Task Flow
+    </h1>
+    <button id="themeToggle"
+            class="mt-3 mb-6 inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            aria-label="Alternar tema"
+            onclick="toggleTheme()">
+      <span id="themeIcon" aria-hidden="true">🌙</span>
+    </button>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 max-w-7xl mx-auto">
+    <!-- Backlog Column -->
+    <div class="kanban-column bg-red-50 dark:bg-red-950/30 p-4 rounded-xl flex flex-col h-full shadow-sm border border-gray-100 dark:border-gray-800 transition-colors">
+      <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-600 dark:text-gray-300">
+        <span class="text-xl">📥</span> Backlog
+      </h2>
+      <div class="tasks flex-1 min-h-[120px] space-y-2" data-status="backlog" ondragover="allowDrop(event)" ondrop="drop(event)"></div>
+      <button onclick="openModal('backlog')" class="mt-4 bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-4 py-2.5 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-700 w-full transition-all text-sm font-medium">
+        ＋ Add Task
+      </button>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 max-w-7xl mx-auto">
-        <!-- Backlog Column -->
-        <div class="kanban-column bg-red-50 p-4 rounded-xl flex flex-col h-full shadow-sm border border-gray-100">
-            <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-600">
-                <span class="text-xl">📥</span> Backlog
-            </h2>
-            <div class="tasks flex-1 min-h-[120px] space-y-2" data-status="backlog" ondragover="allowDrop(event)" ondrop="drop(event)"></div>
-            <button onclick="openModal('backlog')" class="mt-4 bg-gray-200 text-gray-600 px-4 py-2.5 rounded-lg hover:bg-gray-300 w-full transition-all text-sm font-medium">
-                ＋ Add Task
-            </button>
-        </div>
-
-        <!-- Todo Column -->
-        <div class="kanban-column bg-orange-50 p-4 rounded-xl flex flex-col h-full shadow-sm border border-gray-100">
-            <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-600">
-                <span class="text-xl">📌</span> Todo
-            </h2>
-            <div class="tasks flex-1 min-h-[120px] space-y-2" data-status="todo" ondragover="allowDrop(event)" ondrop="drop(event)"></div>
-            <button onclick="openModal('todo')" class="mt-4 bg-gray-200 text-gray-600 px-4 py-2.5 rounded-lg hover:bg-gray-300 w-full transition-all text-sm font-medium">
-                ＋ Add Task
-            </button>
-        </div>
-
-        <!-- In Progress Column -->
-        <div class="kanban-column bg-blue-50 p-4 rounded-xl flex flex-col h-full shadow-sm border border-gray-100">
-            <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-600">
-                <span class="text-xl">🚀</span> In Progress
-            </h2>
-            <div class="tasks flex-1 min-h-[120px] space-y-2" data-status="in-progress" ondragover="allowDrop(event)" ondrop="drop(event)"></div>
-            <button onclick="openModal('in-progress')" class="mt-4 bg-gray-200 text-gray-600 px-4 py-2.5 rounded-lg hover:bg-gray-300 w-full transition-all text-sm font-medium">
-                ＋ Add Task
-            </button>
-        </div>
-
-        <!-- Done Column -->
-        <div class="kanban-column bg-green-50 p-4 rounded-xl flex flex-col h-full shadow-sm border border-gray-100">
-            <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-600">
-                <span class="text-xl">✅</span> Done
-            </h2>
-            <div class="tasks flex-1 min-h-[120px] space-y-2" data-status="done" ondragover="allowDrop(event)" ondrop="drop(event)"></div>
-            <button onclick="openModal('done')" class="mt-4 bg-gray-200 text-gray-600 px-4 py-2.5 rounded-lg hover:bg-gray-300 w-full transition-all text-sm font-medium">
-                ＋ Add Task
-            </button>
-        </div>
+    <!-- Todo Column -->
+    <div class="kanban-column bg-orange-50 dark:bg-yellow-900/40 p-4 rounded-xl flex flex-col h-full shadow-sm border border-gray-100 dark:border-gray-800 transition-colors">
+      <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-600 dark:text-gray-300">
+        <span class="text-xl">📌</span> Todo
+      </h2>
+      <div class="tasks flex-1 min-h-[120px] space-y-2" data-status="todo" ondragover="allowDrop(event)" ondrop="drop(event)"></div>
+      <button onclick="openModal('todo')" class="mt-4 bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-4 py-2.5 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-700 w-full transition-all text-sm font-medium">
+        ＋ Add Task
+      </button>
     </div>
 
-    <!-- Add Task Modal -->
-    <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center backdrop-blur-sm">
-        <div class="bg-white p-6 rounded-xl w-96 shadow-2xl border border-gray-100">
-            <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-700">
-                ✨ New Task
-            </h2>
-            <input type="text" id="taskTitle" placeholder="Task title" class="w-full mb-3 p-2.5 border border-gray-200 rounded-lg focus:ring-1 focus:ring-blue-400 focus:border-blue-400 text-sm">
-            <textarea id="taskDesc" placeholder="Task description" class="w-full mb-4 p-2.5 border border-gray-200 rounded-lg focus:ring-1 focus:ring-blue-400 focus:border-blue-400 h-24 text-sm"></textarea>
-            <div class="flex justify-end gap-2">
-                <button onclick="closeModal()" class="px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-all text-sm">
-                    Cancel
-                </button>
-                <button onclick="addTask()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-all text-sm font-medium">
-                    Add Task
-                </button>
+    <!-- In Progress Column -->
+    <div class="kanban-column bg-blue-50 dark:bg-blue-950/30 p-4 rounded-xl flex flex-col h-full shadow-sm border border-gray-100 dark:border-gray-800 transition-colors">
+      <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-600 dark:text-gray-300">
+        <span class="text-xl">🚀</span> In Progress
+      </h2>
+      <div class="tasks flex-1 min-h-[120px] space-y-2" data-status="in-progress" ondragover="allowDrop(event)" ondrop="drop(event)"></div>
+      <button onclick="openModal('in-progress')" class="mt-4 bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-4 py-2.5 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-700 w-full transition-all text-sm font-medium">
+        ＋ Add Task
+      </button>
+    </div>
+
+    <!-- Done Column -->
+    <div class="kanban-column bg-green-50 dark:bg-green-950/30 p-4 rounded-xl flex flex-col h-full shadow-sm border border-gray-100 dark:border-gray-800 transition-colors">
+      <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-600 dark:text-gray-300">
+        <span class="text-xl">✅</span> Done
+      </h2>
+      <div class="tasks flex-1 min-h-[120px] space-y-2" data-status="done" ondragover="allowDrop(event)" ondrop="drop(event)"></div>
+      <button onclick="openModal('done')" class="mt-4 bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-4 py-2.5 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-700 w-full transition-all text-sm font-medium">
+        ＋ Add Task
+      </button>
+    </div>
+  </div>
+
+  <!-- Add Task Modal -->
+  <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center backdrop-blur-sm">
+    <div class="bg-white dark:bg-gray-900 p-6 rounded-xl w-96 shadow-2xl border border-gray-100 dark:border-gray-800 transition-colors">
+      <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-700 dark:text-gray-200">
+        ✨ New Task
+      </h2>
+      <input type="text" id="taskTitle" placeholder="Task title" class="w-full mb-3 p-2.5 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-1 focus:ring-blue-400 focus:border-blue-400 dark:bg-gray-800 dark:placeholder-gray-400 text-sm">
+      <textarea id="taskDesc" placeholder="Task description" class="w-full mb-4 p-2.5 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-1 focus:ring-blue-400 focus:border-blue-400 h-24 dark:bg-gray-800 dark:placeholder-gray-400 text-sm"></textarea>
+      <div class="flex justify-end gap-2">
+        <button onclick="closeModal()" class="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all text-sm">
+          Cancel
+        </button>
+        <button onclick="addTask()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-all text-sm font-medium">
+          Add Task
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Task Modal -->
+  <div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center backdrop-blur-sm">
+    <div class="bg-white dark:bg-gray-900 p-6 rounded-xl w-96 shadow-2xl border border-gray-100 dark:border-gray-800 transition-colors">
+      <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-700 dark:text-gray-200">
+        ✏️ Edit Task
+      </h2>
+      <input type="hidden" id="editTaskId">
+      <input type="text" id="editTaskTitle" placeholder="Task title" class="w-full mb-3 p-2.5 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-1 focus:ring-blue-400 focus:border-blue-400 text-sm dark:bg-gray-800 dark:placeholder-gray-400">
+      <textarea id="editTaskDesc" placeholder="Task description" class="w-full mb-4 p-2.5 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-1 focus:ring-blue-400 focus:border-blue-400 h-24 text-sm dark:bg-gray-800 dark:placeholder-gray-400"></textarea>
+      <div class="flex justify-end gap-2">
+        <button onclick="closeEditModal()" class="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all text-sm">
+          Cancel
+        </button>
+        <button onclick="saveEditedTask()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-all text-sm font-medium">
+          Save Changes
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ---- Tema (dark mode) ----
+    function setTheme(mode) {
+      const root = document.documentElement;
+      if (mode === 'dark') root.classList.add('dark'); else root.classList.remove('dark');
+      try { localStorage.setItem('theme', mode); } catch {}
+      updateToggleIcon();
+    }
+
+    function toggleTheme() {
+      const isDark = document.documentElement.classList.contains('dark');
+      setTheme(isDark ? 'light' : 'dark');
+    }
+
+    function updateToggleIcon() {
+      const icon = document.getElementById('themeIcon');
+      const isDark = document.documentElement.classList.contains('dark');
+      if (icon) icon.textContent = isDark ? '☀️' : '🌙';
+    }
+
+    (function initTheme() {
+      try {
+        const saved = localStorage.getItem('theme');
+        const isDark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+        setTheme(isDark ? 'dark' : 'light');
+      } catch { updateToggleIcon(); }
+    })();
+
+    // ---- Kanban ----
+    let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+    let draggedTask = null;
+    let currentStatus = 'backlog';
+
+    function saveTasks() {
+      localStorage.setItem('tasks', JSON.stringify(tasks));
+      renderTasks();
+    }
+
+    function renderTasks() {
+      document.querySelectorAll('.tasks').forEach(column => {
+        const status = column.dataset.status;
+        column.innerHTML = tasks
+          .filter(task => task.status === status)
+          .map(task => `
+            <div draggable="true" ondragstart="drag(event)" data-id="${task.id}"
+                 class="task bg-white dark:bg-gray-800 p-4 mb-2 rounded shadow-sm cursor-move transition-colors">
+              <div class="flex justify-between items-start gap-3">
+                <div class="min-w-0">
+                  <h3 class="font-bold break-words">${task.title}</h3>
+                  <p class="text-gray-600 dark:text-gray-300 text-sm break-words">${task.description || ''}</p>
+                </div>
+                <div class="flex gap-2 shrink-0">
+                  <button onclick="openEditModal('${task.id}')" class="text-blue-500 hover:text-blue-700 dark:hover:text-blue-400" title="Editar">✎</button>
+                  <button onclick="deleteTask('${task.id}')" class="text-red-500 hover:text-red-700" title="Excluir">×</button>
+                </div>
+              </div>
             </div>
-        </div>
-    </div>
+          `).join('');
+      });
+    }
 
-    <div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center backdrop-blur-sm">
-        <div class="bg-white p-6 rounded-xl w-96 shadow-2xl border border-gray-100">
-            <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-700">
-                ✏️ Edit Task
-            </h2>
-            <input type="hidden" id="editTaskId">
-            <input type="text" id="editTaskTitle" placeholder="Task title" class="w-full mb-3 p-2.5 border border-gray-200 rounded-lg focus:ring-1 focus:ring-blue-400 focus:border-blue-400 text-sm">
-            <textarea id="editTaskDesc" placeholder="Task description" class="w-full mb-4 p-2.5 border border-gray-200 rounded-lg focus:ring-1 focus:ring-blue-400 focus:border-blue-400 h-24 text-sm"></textarea>
-            <div class="flex justify-end gap-2">
-                <button onclick="closeEditModal()" class="px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-all text-sm">
-                    Cancel
-                </button>
-                <button onclick="saveEditedTask()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-all text-sm font-medium">
-                    Save Changes
-                </button>
-            </div>
-        </div>
-    </div>
+    function openModal(status) {
+      currentStatus = status;
+      document.getElementById('modal').classList.remove('hidden');
+    }
 
-    <script>
-        let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
-        let draggedTask = null;
-        let currentStatus = 'backlog';
+    function closeModal() {
+      document.getElementById('modal').classList.add('hidden');
+    }
 
-        function saveTasks() {
-            localStorage.setItem('tasks', JSON.stringify(tasks));
-            renderTasks();
+    function addTask() {
+      const title = document.getElementById('taskTitle').value.trim();
+      const desc = document.getElementById('taskDesc').value.trim();
+
+      if (title) {
+        tasks.push({
+          id: Date.now().toString(),
+          title,
+          description: desc,
+          status: currentStatus
+        });
+        saveTasks();
+        closeModal();
+        document.getElementById('taskTitle').value = '';
+        document.getElementById('taskDesc').value = '';
+      }
+    }
+
+    function deleteTask(id) {
+      tasks = tasks.filter(task => task.id !== id);
+      saveTasks();
+    }
+
+    function allowDrop(ev) { ev.preventDefault(); }
+
+    function drag(ev) {
+      const taskElement = ev.target.closest('.task');
+      draggedTask = tasks.find(task => task.id === taskElement.dataset.id);
+    }
+
+    function drop(ev) {
+      ev.preventDefault();
+      const container = ev.target.closest('.tasks');
+      if (!container) return;
+      const newStatus = container.dataset.status;
+
+      if (draggedTask) {
+        draggedTask.status = newStatus;
+        saveTasks();
+      }
+    }
+
+    function openEditModal(taskId) {
+      const task = tasks.find(t => t.id === taskId);
+      if (task) {
+        document.getElementById('editTaskId').value = task.id;
+        document.getElementById('editTaskTitle').value = task.title;
+        document.getElementById('editTaskDesc').value = task.description;
+        document.getElementById('editModal').classList.remove('hidden');
+      }
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').classList.add('hidden');
+      document.getElementById('editTaskId').value = '';
+      document.getElementById('editTaskTitle').value = '';
+      document.getElementById('editTaskDesc').value = '';
+    }
+
+    function saveEditedTask() {
+      const taskId = document.getElementById('editTaskId').value;
+      const newTitle = document.getElementById('editTaskTitle').value.trim();
+      const newDesc = document.getElementById('editTaskDesc').value.trim();
+
+      if (taskId && newTitle) {
+        const taskIndex = tasks.findIndex(t => t.id === taskId);
+        if (taskIndex > -1) {
+          tasks[taskIndex].title = newTitle;
+          tasks[taskIndex].description = newDesc;
+          saveTasks();
+          closeEditModal();
         }
+      }
+    }
 
-        function renderTasks() {
-            document.querySelectorAll('.tasks').forEach(column => {
-                const status = column.dataset.status;
-                column.innerHTML = tasks
-                    .filter(task => task.status === status)
-                    .map(task => `
-                        <div draggable="true" ondragstart="drag(event)" data-id="${task.id}" 
-                            class="task bg-white p-4 mb-2 rounded shadow-sm cursor-move">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <h3 class="font-bold">${task.title}</h3>
-                                    <p class="text-gray-600 text-sm">${task.description}</p>
-                                </div>
-                                <div class="flex gap-2">
-                                    <button onclick="openEditModal('${task.id}')" class="text-blue-500 hover:text-blue-700">✎</button>
-                                    <button onclick="deleteTask('${task.id}')" class="text-red-500 hover:text-red-700">×</button>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('');
-            });
-        }
-
-        function openModal(status) {
-            currentStatus = status;
-            document.getElementById('modal').classList.remove('hidden');
-        }
-
-        function closeModal() {
-            document.getElementById('modal').classList.add('hidden');
-        }
-
-        function addTask() {
-            const title = document.getElementById('taskTitle').value;
-            const desc = document.getElementById('taskDesc').value;
-            
-            if (title) {
-                tasks.push({
-                    id: Date.now().toString(),
-                    title,
-                    description: desc,
-                    status: currentStatus
-                });
-                saveTasks();
-                closeModal();
-                document.getElementById('taskTitle').value = '';
-                document.getElementById('taskDesc').value = '';
-            }
-        }
-
-        function deleteTask(id) {
-            tasks = tasks.filter(task => task.id !== id);
-            saveTasks();
-        }
-
-        function allowDrop(ev) {
-            ev.preventDefault();
-        }
-
-        function drag(ev) {
-            const taskElement = ev.target.closest('.task');
-            draggedTask = tasks.find(task => task.id === taskElement.dataset.id);
-        }
-
-        function drop(ev) {
-            ev.preventDefault();
-            const newStatus = ev.target.closest('.tasks').dataset.status;
-            
-            if (draggedTask) {
-                draggedTask.status = newStatus;
-                saveTasks();
-            }
-        }
-
-        function openEditModal(taskId) {
-            const task = tasks.find(t => t.id === taskId);
-            if (task) {
-                document.getElementById('editTaskId').value = task.id;
-                document.getElementById('editTaskTitle').value = task.title;
-                document.getElementById('editTaskDesc').value = task.description;
-                document.getElementById('editModal').classList.remove('hidden');
-            }
-        }
-
-        function closeEditModal() {
-            document.getElementById('editModal').classList.add('hidden');
-            document.getElementById('editTaskId').value = '';
-            document.getElementById('editTaskTitle').value = '';
-            document.getElementById('editTaskDesc').value = '';
-        }
-
-        function saveEditedTask() {
-            const taskId = document.getElementById('editTaskId').value;
-            const newTitle = document.getElementById('editTaskTitle').value;
-            const newDesc = document.getElementById('editTaskDesc').value;
-
-            if (taskId && newTitle) {
-                const taskIndex = tasks.findIndex(t => t.id === taskId);
-                if (taskIndex > -1) {
-                    tasks[taskIndex].title = newTitle;
-                    tasks[taskIndex].description = newDesc;
-                    saveTasks();
-                    closeEditModal();
-                }
-            }
-        }
-
-
-        // Initial render
-        renderTasks();
-    </script>
+    // Initial render
+    renderTasks();
+  </script>
 </body>
 </html>
