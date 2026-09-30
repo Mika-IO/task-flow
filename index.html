@@ -231,6 +231,57 @@
     .add-task { height: 38px; border-radius: 11px; border: 0; background: transparent; color: var(--muted); font-weight: 800; text-align: left; padding: 0 10px; }
     .add-task:hover { background: var(--surface); color: var(--text); }
 
+    .select-filter {
+      height: 42px; padding: 0 36px 0 14px; border-radius: 12px; border: 2px solid var(--line); background: var(--surface);
+      color: var(--text); font: inherit; font-weight: 700; font-size: .92rem; max-width: 220px; cursor: pointer;
+    }
+    .select-filter:focus { border-color: var(--accent); outline: none; }
+    .task-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 8px; font-size: .76rem; font-weight: 700; color: var(--muted); }
+    .project-chip {
+      display: inline-flex; align-items: center; gap: 4px; max-width: 100%; padding: 1px 8px; border-radius: 99px;
+      background: var(--surface-2); border: 1px solid var(--line); color: var(--text); font-size: .74rem; font-weight: 800;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer;
+    }
+    .project-chip:hover { border-color: var(--accent); }
+    .column[data-status="done"] .tasks { max-height: 420px; overflow-y: auto; padding-right: 2px; }
+    .see-all {
+      height: 34px; border-radius: 10px; border: 1px dashed var(--line-strong); background: transparent;
+      color: var(--text); font-weight: 800; font-size: .86rem;
+    }
+    .see-all:hover { border-color: var(--accent); background: var(--surface); }
+
+    /* ---------- Task metrics ---------- */
+    .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 2fr); gap: 10px; }
+    .metric { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 12px 14px; min-width: 0; }
+    .metric-value { font-family: var(--font-display); font-weight: 600; font-size: 1.45rem; line-height: 1.15; font-variant-numeric: tabular-nums; }
+    .metric-label { font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+    .metric-note { font-size: .78rem; color: var(--muted); font-weight: 600; margin-top: 2px; overflow-wrap: anywhere; }
+    .chart-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+    .bars { position: relative; display: flex; align-items: flex-end; gap: 2px; height: 44px; margin-top: 8px; border-bottom: 1px solid var(--line-strong); }
+    .bar-slot { position: relative; flex: 1; height: 100%; display: flex; align-items: flex-end; justify-content: center; }
+    .bar { width: 100%; max-width: 18px; border-radius: 4px 4px 0 0; background: var(--accent); min-height: 0; }
+    .bar.zero { height: 2px !important; background: var(--line); border-radius: 1px; }
+    .bar-slot:hover .bar { filter: brightness(.9); }
+    .bar-slot:hover .bar.zero { background: var(--line-strong); }
+    .bar-tip {
+      position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); white-space: nowrap; pointer-events: none;
+      background: var(--text); color: var(--bg); font-size: .74rem; font-weight: 700; padding: 3px 8px; border-radius: 7px; opacity: 0; transition: opacity .1s; z-index: 2;
+    }
+    .bar-slot:hover .bar-tip { opacity: 1; }
+    .bar-slot:first-child .bar-tip { left: 0; transform: none; }
+    .bar-slot:last-child .bar-tip { left: auto; right: 0; transform: none; }
+    .bar-axis { display: flex; justify-content: space-between; font-size: .7rem; font-weight: 700; color: var(--muted); margin-top: 4px; }
+
+    /* ---------- Done list modal ---------- */
+    .sheet.wide { max-width: 620px; }
+    .done-list { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; max-height: 55vh; margin-inline: -6px; padding-inline: 6px; }
+    .done-day { font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 10px 0 2px; }
+    .done-day:first-child { margin-top: 0; }
+    .done-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line); }
+    .done-row .task-body { padding-top: 0; }
+    .done-row .task-meta { margin-top: 3px; }
+    .done-empty { color: var(--muted); font-weight: 700; text-align: center; padding: 24px 0; }
+
     /* ---------- Modals ---------- */
     .modal { position: fixed; inset: 0; z-index: 50; background: var(--overlay); display: flex; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(3px); }
     .sheet { width: 100%; max-width: 440px; max-height: calc(100vh - 32px); overflow-y: auto; background: var(--surface); border-radius: var(--r-lg); padding: 24px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 14px; animation: popup .22s ease-out; }
@@ -264,7 +315,11 @@
     }
 
     /* ---------- Responsive ---------- */
-    @media (max-width: 1000px) { .columns { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 1000px) {
+      .columns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .metric.chart { grid-column: 1 / -1; }
+    }
     @media (max-width: 760px) {
       .habit { grid-template-columns: auto minmax(0, 1fr) auto; }
       .week { grid-column: 1 / -1; grid-row: 2; justify-content: space-between; }
@@ -275,7 +330,8 @@
       .columns { grid-template-columns: minmax(0, 1fr); }
       .panel { padding: 16px; }
       .head-tools, .progress { width: 100%; }
-      .head-tools .btn { width: 100%; }
+      .head-tools .btn, .head-tools .select-filter { flex: 1; max-width: none; }
+      .metric { padding: 10px 12px; }
       .stats { width: 100%; }
       .stat { flex: 1 1 0; min-width: 0; padding: 8px 10px; gap: 8px; }
       .stat-emoji { font-size: 1.15rem; }
@@ -304,6 +360,22 @@
       <div class="stats" id="stats"></div>
     </section>
 
+    <!-- Tasks -->
+    <section class="board" aria-labelledby="tasksTitle">
+      <div class="section-head">
+        <div>
+          <h2 id="tasksTitle">📋 Tasks</h2>
+          <p id="taskSummary"></p>
+        </div>
+        <div class="head-tools">
+          <select id="projectFilter" class="select-filter" aria-label="Filter by project" onchange="setProjectFilter(this.value)"></select>
+          <button class="btn btn-primary" onclick="openModal('todo')">＋ New task</button>
+        </div>
+      </div>
+      <div class="metrics" id="metrics" aria-label="Task metrics"></div>
+      <div class="columns" id="columns"></div>
+    </section>
+
     <!-- Habits -->
     <section class="panel" aria-labelledby="habitsTitle">
       <div class="section-head">
@@ -322,21 +394,9 @@
       <div class="garden" id="garden" aria-label="Today's garden"></div>
       <div class="habit-list" id="habitList"></div>
     </section>
-
-    <!-- Tasks -->
-    <section class="board" aria-labelledby="tasksTitle">
-      <div class="section-head">
-        <div>
-          <h2 id="tasksTitle">📋 Tasks</h2>
-          <p id="taskSummary"></p>
-        </div>
-        <div class="head-tools">
-          <button class="btn btn-primary" onclick="openModal('todo')">＋ New task</button>
-        </div>
-      </div>
-      <div class="columns" id="columns"></div>
-    </section>
   </div>
+
+  <datalist id="projectOptions"></datalist>
 
   <!-- Add Task Modal -->
   <div id="modal" class="modal" hidden onclick="if (event.target === this) closeModal()">
@@ -347,6 +407,9 @@
       </label>
       <label class="field"><span class="field-label">Description</span>
         <textarea id="taskDesc" placeholder="Details, links, notes (optional)" class="input"></textarea>
+      </label>
+      <label class="field"><span class="field-label">Project</span>
+        <input type="text" id="taskProject" list="projectOptions" placeholder="No project" class="input" autocomplete="off">
       </label>
       <label class="field"><span class="field-label">Column</span>
         <select id="taskStatus" class="input"></select>
@@ -368,6 +431,9 @@
       </label>
       <label class="field"><span class="field-label">Description</span>
         <textarea id="editTaskDesc" placeholder="Details, links, notes (optional)" class="input"></textarea>
+      </label>
+      <label class="field"><span class="field-label">Project</span>
+        <input type="text" id="editTaskProject" list="projectOptions" placeholder="No project" class="input" autocomplete="off">
       </label>
       <label class="field"><span class="field-label">Column</span>
         <select id="editTaskStatus" class="input"></select>
@@ -401,6 +467,18 @@
         <button onclick="closeHabitModal()" class="btn btn-ghost">Cancel</button>
         <button onclick="saveHabit()" class="btn btn-primary">Save habit</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Done tasks list -->
+  <div id="doneModal" class="modal" hidden onclick="if (event.target === this) closeDoneModal()">
+    <div class="sheet wide" role="dialog" aria-modal="true" aria-labelledby="doneModalTitle">
+      <div class="section-head">
+        <h2 id="doneModalTitle">✅ Done tasks</h2>
+        <button class="icon-btn" onclick="closeDoneModal()" aria-label="Close">✕</button>
+      </div>
+      <input type="search" id="doneSearch" class="input" placeholder="Search done tasks" oninput="renderDoneList()">
+      <div class="done-list" id="doneList"></div>
     </div>
   </div>
 
@@ -463,21 +541,82 @@
     }
 
     // ---- Kanban ----
-    // Mesmo formato salvo desde a primeira versão: localStorage 'tasks' = [{ id, title, description, status }]
+    // Formato salvo desde a primeira versão: localStorage 'tasks' = [{ id, title, description, status }]
+    // Campos novos, todos opcionais: project (string), createdAt / startedAt / doneAt (ms desde epoch)
     const COLUMNS = [
       { status: 'backlog',     label: 'Backlog',     icon: '📥', color: 'var(--col-backlog)',  empty: 'Ideas and someday tasks' },
       { status: 'todo',        label: 'Todo',        icon: '📌', color: 'var(--col-todo)',     empty: 'Next up' },
       { status: 'in-progress', label: 'In Progress', icon: '🚀', color: 'var(--col-progress)', empty: 'Drag a task here to start it' },
       { status: 'done',        label: 'Done',        icon: '✅', color: 'var(--col-done)',     empty: 'Finished tasks land here' },
     ];
+    const DONE_LIMIT = 8;
+    const NO_PROJECT = '__none__';
+    const DAY_MS = 86400000;
 
     let tasks = loadJSON('tasks', []);
     if (!Array.isArray(tasks)) tasks = [];
     let draggedTask = null;
+    let projectFilter = '';
+    try { projectFilter = localStorage.getItem('taskProjectFilter') || ''; } catch {}
 
     // Tarefas com status desconhecido aparecem no Backlog, sem alterar o dado salvo
     function statusOf(task) {
       return COLUMNS.some(c => c.status === task.status) ? task.status : 'backlog';
+    }
+
+    // Tarefas antigas não têm createdAt, mas o id sempre foi Date.now()
+    function createdAtOf(task) {
+      if (task.createdAt) return task.createdAt;
+      const fromId = Number(task.id);
+      return Number.isFinite(fromId) && fromId > 1e12 ? fromId : null;
+    }
+
+    function projectOf(task) {
+      return typeof task.project === 'string' ? task.project.trim() : '';
+    }
+
+    function allProjects() {
+      return [...new Set(tasks.map(projectOf).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    }
+
+    function visibleTasks() {
+      if (!projectFilter) return tasks;
+      if (projectFilter === NO_PROJECT) return tasks.filter(t => !projectOf(t));
+      return tasks.filter(t => projectOf(t) === projectFilter);
+    }
+
+    // Registra as datas ao mudar de coluna
+    function setStatus(task, newStatus) {
+      const now = Date.now();
+      if (!task.createdAt && !createdAtOf(task)) task.createdAt = now;
+      if (newStatus === 'in-progress' && !task.startedAt) task.startedAt = now;
+      if (newStatus === 'done' && task.status !== 'done') task.doneAt = now;
+      if (newStatus !== 'done') delete task.doneAt;
+      task.status = newStatus;
+    }
+
+    function relDay(ms) {
+      if (!ms) return '';
+      const start = d => new Date(d).setHours(0, 0, 0, 0);
+      const days = Math.round((start(Date.now()) - start(ms)) / DAY_MS);
+      if (days <= 0) return 'today';
+      if (days === 1) return 'yesterday';
+      if (days < 30) return `${days}d ago`;
+      return new Date(ms).toLocaleDateString('en', { month: 'short', day: 'numeric' });
+    }
+
+    function duration(ms) {
+      if (ms == null || ms < 0) return '—';
+      const hours = ms / 3600000;
+      if (hours < 1) return '<1h';
+      if (hours < 24) return `${Math.round(hours)}h`;
+      const days = hours / 24;
+      return days < 10 ? `${days.toFixed(1).replace(/\.0$/, '')}d` : `${Math.round(days)}d`;
+    }
+
+    function sortedDone(list) {
+      return list.filter(t => statusOf(t) === 'done')
+        .sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0) || (createdAtOf(b) || 0) - (createdAtOf(a) || 0));
     }
 
     function statusOptions(selected) {
@@ -488,6 +627,58 @@
       store('tasks', tasks);
       renderTasks();
       renderSummary();
+      if (!document.getElementById('doneModal').hidden) renderDoneList();
+    }
+
+    function setProjectFilter(value) {
+      projectFilter = value;
+      try { localStorage.setItem('taskProjectFilter', value); } catch {}
+      renderTasks();
+    }
+
+    function renderProjectControls() {
+      const projects = allProjects();
+      if (projectFilter && projectFilter !== NO_PROJECT && !projects.includes(projectFilter)) projectFilter = '';
+      const opt = (value, label) => `<option value="${escapeHtml(value)}" ${value === projectFilter ? 'selected' : ''}>${escapeHtml(label)}</option>`;
+      document.getElementById('projectFilter').innerHTML =
+        opt('', `🗂️ All projects (${tasks.length})`) +
+        projects.map(p => opt(p, `📁 ${p} (${tasks.filter(t => projectOf(t) === p).length})`)).join('') +
+        (projects.length ? opt(NO_PROJECT, `No project (${tasks.filter(t => !projectOf(t)).length})`) : '');
+      document.getElementById('projectOptions').innerHTML = projects.map(p => `<option value="${escapeHtml(p)}"></option>`).join('');
+    }
+
+    function taskMeta(task, status) {
+      const project = projectOf(task);
+      const created = createdAtOf(task);
+      let when = '';
+      if (status === 'done') {
+        when = task.doneAt ? `✅ ${relDay(task.doneAt)}${created ? ` · took ${duration(task.doneAt - created)}` : ''}` : '';
+      } else if (status === 'in-progress' && task.startedAt) {
+        when = `🚀 started ${relDay(task.startedAt)}`;
+      } else if (created) {
+        when = `🕓 ${relDay(created)}`;
+      }
+      if (!project && !when) return '';
+      return `<div class="task-meta">
+          ${project ? `<button class="project-chip" onclick="setProjectFilter(this.dataset.p)" data-p="${escapeHtml(project)}" title="Show only ${escapeHtml(project)}">📁 ${escapeHtml(project)}</button>` : ''}
+          ${when ? `<span>${when}</span>` : ''}
+        </div>`;
+    }
+
+    function taskCard(task, status) {
+      const id = escapeHtml(task.id);
+      return `
+        <div class="task ${status === 'done' ? 'done' : ''}" draggable="true" ondragstart="drag(event)" ondragend="dragEnd()" data-id="${id}">
+          <div class="task-body">
+            <div class="task-title">${escapeHtml(task.title)}</div>
+            ${task.description ? `<div class="task-desc">${escapeHtml(task.description)}</div>` : ''}
+            ${taskMeta(task, status)}
+          </div>
+          <div class="row-actions">
+            <button class="icon-btn" onclick="openEditModal('${id}')" title="Edit" aria-label="Edit task">${ICONS.edit}</button>
+            <button class="icon-btn danger" onclick="deleteTask('${id}')" title="Delete" aria-label="Delete task">${ICONS.trash}</button>
+          </div>
+        </div>`;
     }
 
     function renderColumns() {
@@ -499,37 +690,135 @@
             <span class="count" data-count="${col.status}">0</span>
           </div>
           <div class="tasks" data-status="${col.status}"></div>
+          ${col.status === 'done' ? `<button class="see-all" id="seeAllDone" onclick="openDoneModal()" hidden></button>` : ''}
           <button class="add-task" onclick="openModal('${col.status}')">＋ Add task</button>
         </div>
       `).join('');
     }
 
     function renderTasks() {
+      renderProjectControls();
+      const visible = visibleTasks();
+
       COLUMNS.forEach(col => {
-        const list = tasks.filter(task => statusOf(task) === col.status);
-        document.querySelector(`[data-count="${col.status}"]`).textContent = list.length;
-        document.querySelector(`.tasks[data-status="${col.status}"]`).innerHTML = list.length ? list.map(task => `
-            <div class="task ${col.status === 'done' ? 'done' : ''}" draggable="true" ondragstart="drag(event)" ondragend="dragEnd()" data-id="${escapeHtml(task.id)}">
-              <div class="task-body">
-                <div class="task-title">${escapeHtml(task.title)}</div>
-                ${task.description ? `<div class="task-desc">${escapeHtml(task.description)}</div>` : ''}
-              </div>
-              <div class="row-actions">
-                <button class="icon-btn" onclick="openEditModal('${escapeHtml(task.id)}')" title="Edit" aria-label="Edit task">${ICONS.edit}</button>
-                <button class="icon-btn danger" onclick="deleteTask('${escapeHtml(task.id)}')" title="Delete" aria-label="Delete task">${ICONS.trash}</button>
-              </div>
-            </div>
-          `).join('') : `<div class="column-empty">${col.empty}</div>`;
+        let list = col.status === 'done' ? sortedDone(visible) : visible.filter(task => statusOf(task) === col.status);
+        const total = list.length;
+        if (col.status === 'done') {
+          const btn = document.getElementById('seeAllDone');
+          btn.hidden = !total;
+          btn.textContent = total > DONE_LIMIT ? `See all ${total} done →` : 'Open done list →';
+          list = list.slice(0, DONE_LIMIT);
+        }
+        document.querySelector(`[data-count="${col.status}"]`).textContent = total;
+        document.querySelector(`.tasks[data-status="${col.status}"]`).innerHTML = list.length
+          ? list.map(task => taskCard(task, col.status)).join('')
+          : `<div class="column-empty">${col.empty}</div>`;
       });
 
-      const done = tasks.filter(t => statusOf(t) === 'done').length;
-      document.getElementById('taskSummary').textContent = tasks.length
-        ? `${done} of ${tasks.length} done. Drag cards between columns.`
-        : 'Add your first task to get started.';
+      const done = visible.filter(t => statusOf(t) === 'done').length;
+      const scope = projectFilter === NO_PROJECT ? ' without a project' : projectFilter ? ` in ${projectFilter}` : '';
+      document.getElementById('taskSummary').textContent = visible.length
+        ? `${done} of ${visible.length} done${scope}. Drag cards between columns.`
+        : projectFilter ? `No tasks${scope} yet.` : 'Add your first task to get started.';
+
+      renderMetrics(visible);
+    }
+
+    // ---- Métricas de data ----
+    function renderMetrics(list) {
+      const now = Date.now();
+      const today0 = new Date().setHours(0, 0, 0, 0);
+      const weekStart = today0 - ((new Date().getDay() + 6) % 7) * DAY_MS; // semana começa na segunda
+      const done = list.filter(t => statusOf(t) === 'done' && t.doneAt);
+      const doneWeek = done.filter(t => t.doneAt >= weekStart).length;
+      const done30 = done.filter(t => t.doneAt >= today0 - 29 * DAY_MS).length;
+      const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+      const leadTimes = done.map(t => createdAtOf(t) && t.doneAt - createdAtOf(t)).filter(v => v != null && v >= 0);
+      const cycleTimes = done.filter(t => t.startedAt).map(t => t.doneAt - t.startedAt).filter(v => v >= 0);
+      const open = list.filter(t => statusOf(t) !== 'done' && createdAtOf(t));
+      const oldest = open.sort((a, b) => createdAtOf(a) - createdAtOf(b))[0];
+
+      const days = Array.from({ length: 14 }, (_, i) => {
+        const start = new Date(today0 - (13 - i) * DAY_MS);
+        const end = addDays(start, 1).getTime();
+        return { date: start, count: done.filter(t => t.doneAt >= start.getTime() && t.doneAt < end).length };
+      });
+      const max = Math.max(1, ...days.map(d => d.count));
+      const fmt = d => d.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+      const total14 = days.reduce((a, d) => a + d.count, 0);
+
+      const tile = (value, label, note) => `
+        <div class="metric"><div class="metric-value">${value}</div><div class="metric-label">${label}</div>${note ? `<div class="metric-note">${note}</div>` : ''}</div>`;
+
+      document.getElementById('metrics').innerHTML =
+        tile(doneWeek, 'Done this week', `${done30} in the last 30 days`) +
+        tile(duration(avg(leadTimes)), 'Avg time to done', leadTimes.length ? `created → done, ${leadTimes.length} task${leadTimes.length === 1 ? '' : 's'}` : 'no dated tasks yet') +
+        tile(duration(avg(cycleTimes)), 'Avg work time', cycleTimes.length ? 'in progress → done' : 'start a task to measure') +
+        tile(oldest ? duration(now - createdAtOf(oldest)) : '—', 'Oldest open', oldest ? escapeHtml(oldest.title) : 'nothing waiting') +
+        `<div class="metric chart">
+          <div class="chart-head"><span class="metric-label">Finished per day</span><span class="metric-note">${total14} in 14 days · max ${max}</span></div>
+          <div class="bars" role="img" aria-label="Tasks finished per day over the last 14 days: ${days.map(d => `${fmt(d.date)} ${d.count}`).join(', ')}">
+            ${days.map(d => `
+              <div class="bar-slot">
+                <div class="bar ${d.count ? '' : 'zero'}" style="height:${(d.count / max) * 100}%"></div>
+                <span class="bar-tip">${d.date.toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' })}: ${d.count} done</span>
+              </div>`).join('')}
+          </div>
+          <div class="bar-axis"><span>${fmt(days[0].date)}</span><span>Today</span></div>
+        </div>`;
+    }
+
+    // ---- Lista de feitas (popup) ----
+    function openDoneModal() {
+      document.getElementById('doneSearch').value = '';
+      renderDoneList();
+      document.getElementById('doneModal').hidden = false;
+      document.getElementById('doneSearch').focus();
+    }
+
+    function closeDoneModal() {
+      document.getElementById('doneModal').hidden = true;
+    }
+
+    function renderDoneList() {
+      const q = document.getElementById('doneSearch').value.trim().toLowerCase();
+      const list = sortedDone(visibleTasks()).filter(t =>
+        !q || [t.title, t.description, projectOf(t)].some(v => String(v || '').toLowerCase().includes(q)));
+      const el = document.getElementById('doneList');
+      if (!list.length) {
+        el.innerHTML = `<div class="done-empty">${q ? 'No done tasks match your search.' : 'Nothing finished yet.'}</div>`;
+        return;
+      }
+      let lastGroup = null;
+      el.innerHTML = list.map(t => {
+        const group = t.doneAt ? new Date(t.doneAt).toLocaleDateString('en', { weekday: 'long', month: 'long', day: 'numeric' }) : 'Earlier (no date)';
+        const head = group !== lastGroup ? `<div class="done-day">${group}</div>` : '';
+        lastGroup = group;
+        const id = escapeHtml(t.id);
+        return `${head}
+          <div class="done-row">
+            <div class="task-body">
+              <div class="task-title">${escapeHtml(t.title)}</div>
+              ${taskMeta(t, 'done')}
+            </div>
+            <div class="row-actions">
+              <button class="icon-btn" onclick="restoreTask('${id}')" title="Move back to Todo" aria-label="Move back to Todo">↩</button>
+              <button class="icon-btn danger" onclick="deleteTask('${id}')" title="Delete" aria-label="Delete task">${ICONS.trash}</button>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function restoreTask(id) {
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
+      setStatus(task, 'todo');
+      saveTasks();
     }
 
     function openModal(status) {
       document.getElementById('taskStatus').innerHTML = statusOptions(status);
+      document.getElementById('taskProject').value = projectFilter && projectFilter !== NO_PROJECT ? projectFilter : '';
       document.getElementById('modal').hidden = false;
       document.getElementById('taskTitle').focus();
     }
@@ -541,19 +830,26 @@
     function addTask() {
       const title = document.getElementById('taskTitle').value.trim();
       const desc = document.getElementById('taskDesc').value.trim();
+      const project = document.getElementById('taskProject').value.trim();
       const status = document.getElementById('taskStatus').value;
 
       if (title) {
-        tasks.push({
-          id: Date.now().toString(),
+        const now = Date.now();
+        const task = {
+          id: now.toString(),
           title,
           description: desc,
-          status
-        });
+          status: 'backlog',
+          createdAt: now
+        };
+        if (project) task.project = project;
+        setStatus(task, status);
+        tasks.push(task);
         saveTasks();
         closeModal();
         document.getElementById('taskTitle').value = '';
         document.getElementById('taskDesc').value = '';
+        if (status === 'done') celebrate(['✅', '🎉', '✨', '🌟']);
       }
     }
 
@@ -590,9 +886,9 @@
       container.classList.remove('drop-hover');
       const newStatus = container.dataset.status;
 
-      if (draggedTask) {
-        const wasDone = draggedTask.status === 'done';
-        draggedTask.status = newStatus;
+      if (draggedTask && statusOf(draggedTask) !== newStatus) {
+        const wasDone = statusOf(draggedTask) === 'done';
+        setStatus(draggedTask, newStatus);
         saveTasks();
         if (newStatus === 'done' && !wasDone) celebrate(['✅', '🎉', '✨', '🌟']);
       }
@@ -604,6 +900,7 @@
         document.getElementById('editTaskId').value = task.id;
         document.getElementById('editTaskTitle').value = task.title;
         document.getElementById('editTaskDesc').value = task.description || '';
+        document.getElementById('editTaskProject').value = projectOf(task);
         document.getElementById('editTaskStatus').innerHTML = statusOptions(statusOf(task));
         document.getElementById('editModal').hidden = false;
         document.getElementById('editTaskTitle').focus();
@@ -615,21 +912,24 @@
       document.getElementById('editTaskId').value = '';
       document.getElementById('editTaskTitle').value = '';
       document.getElementById('editTaskDesc').value = '';
+      document.getElementById('editTaskProject').value = '';
     }
 
     function saveEditedTask() {
       const taskId = document.getElementById('editTaskId').value;
       const newTitle = document.getElementById('editTaskTitle').value.trim();
       const newDesc = document.getElementById('editTaskDesc').value.trim();
+      const newProject = document.getElementById('editTaskProject').value.trim();
       const newStatus = document.getElementById('editTaskStatus').value;
 
       if (taskId && newTitle) {
-        const taskIndex = tasks.findIndex(t => t.id === taskId);
-        if (taskIndex > -1) {
-          const wasDone = tasks[taskIndex].status === 'done';
-          tasks[taskIndex].title = newTitle;
-          tasks[taskIndex].description = newDesc;
-          tasks[taskIndex].status = newStatus;
+        const task = tasks.find(t => t.id === taskId);
+        if (task) {
+          const wasDone = statusOf(task) === 'done';
+          task.title = newTitle;
+          task.description = newDesc;
+          if (newProject) task.project = newProject; else delete task.project;
+          if (statusOf(task) !== newStatus) setStatus(task, newStatus);
           saveTasks();
           closeEditModal();
           if (newStatus === 'done' && !wasDone) celebrate(['✅', '🎉', '✨', '🌟']);
@@ -975,6 +1275,7 @@
         editModal: [closeEditModal, saveEditedTask],
         habitModal: [closeHabitModal, saveHabit],
         confirmModal: [closeConfirm, confirmDelete],
+        doneModal: [closeDoneModal, () => {}],
       };
       const open = Object.keys(actions).find(id => !document.getElementById(id).hidden);
       if (!open) return;
