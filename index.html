@@ -1,204 +1,554 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Kanban Board</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Task Flow</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌱</text></svg>">
 
-  <!-- Evita "flash" aplicando o tema salvo/sistema antes de renderizar -->
+  <!-- Evita "flash" aplicando o tema salvo antes de renderizar -->
   <script>
     (() => {
       try {
         const saved = localStorage.getItem('theme');
-        const isDark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
-        if (isDark) document.documentElement.classList.add('dark');
+        if (saved === 'dark' || saved === 'light') document.documentElement.dataset.theme = saved;
       } catch {}
     })();
   </script>
 
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = { darkMode: 'class' };
-  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap">
+
+  <style>
+    /* Layout: uma tela só. Topo com resumo do dia, painel de hábitos (jardim + lista), quadro kanban abaixo. */
+    :root {
+      --bg: #f3f6f1;
+      --surface: #ffffff;
+      --surface-2: #e9efe6;
+      --line: #dbe3d7;
+      --line-strong: #bccab6;
+      --text: #1b2a21;
+      --muted: #5f6f65;
+      --accent: #05c26a;
+      --accent-deep: #03904e;
+      --accent-text: #03804a;
+      --accent-soft: #d5f5e3;
+      --on-accent: #ffffff;
+      --danger: #d9463b;
+      --soil: #d9cbb4;
+      --col-backlog: #9aa59e;
+      --col-todo: #f2a93b;
+      --col-progress: #3b9df2;
+      --col-done: #05c26a;
+      --shadow: 0 1px 2px rgb(27 42 33 / .06), 0 4px 14px rgb(27 42 33 / .05);
+      --overlay: rgb(20 30 24 / .45);
+
+      --font-display: "Fredoka", "Nunito", ui-rounded, system-ui, sans-serif;
+      --font-body: "Nunito", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+      --r-sm: 10px;
+      --r-md: 14px;
+      --r-lg: 22px;
+      color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #131915; --surface: #1c241f; --surface-2: #242e27; --line: #2f3b33; --line-strong: #435148;
+        --text: #e5ece6; --muted: #98a79d; --accent: #2fd98a; --accent-deep: #139c5c; --accent-text: #2fd98a;
+        --accent-soft: #1d3d2c; --on-accent: #0d1f15; --danger: #f07268; --soil: #3a3226;
+        --col-backlog: #7d8a82; --col-todo: #f5b95a; --col-progress: #62b3f7; --col-done: #2fd98a;
+        --shadow: 0 1px 2px rgb(0 0 0 / .3), 0 6px 18px rgb(0 0 0 / .2); --overlay: rgb(0 0 0 / .6);
+        color-scheme: dark;
+      }
+    }
+    :root[data-theme="dark"] {
+      --bg: #131915; --surface: #1c241f; --surface-2: #242e27; --line: #2f3b33; --line-strong: #435148;
+      --text: #e5ece6; --muted: #98a79d; --accent: #2fd98a; --accent-deep: #139c5c; --accent-text: #2fd98a;
+      --accent-soft: #1d3d2c; --on-accent: #0d1f15; --danger: #f07268; --soil: #3a3226;
+      --col-backlog: #7d8a82; --col-todo: #f5b95a; --col-progress: #62b3f7; --col-done: #2fd98a;
+      --shadow: 0 1px 2px rgb(0 0 0 / .3), 0 6px 18px rgb(0 0 0 / .2); --overlay: rgb(0 0 0 / .6);
+      color-scheme: dark;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.5;
+      padding-inline: 16px;
+      padding-block: 0 48px;
+      transition: background-color .3s, color .3s;
+    }
+    h1, h2, h3 { font-family: var(--font-display); font-weight: 600; margin: 0; text-wrap: balance; letter-spacing: -.01em; }
+    button { font: inherit; color: inherit; cursor: pointer; }
+    :focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: 2px; }
+
+    .wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+
+    /* ---------- Top bar ---------- */
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 18px 0; }
+    .brand { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-weight: 700; font-size: 1.3rem; }
+    .brand-mark { width: 38px; height: 38px; display: grid; place-items: center; font-size: 1.3rem; background: var(--accent-soft); border-radius: 12px; }
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+    .today { color: var(--muted); font-weight: 700; font-size: .9rem; }
+    .icon-btn {
+      width: 36px; height: 36px; display: inline-grid; place-items: center; flex: none;
+      border: 1px solid transparent; border-radius: var(--r-sm); background: transparent; color: var(--muted);
+      transition: background-color .15s, color .15s;
+    }
+    .icon-btn:hover { background: var(--surface-2); color: var(--text); }
+    .icon-btn.danger:hover { color: var(--danger); }
+    .icon-btn svg { width: 18px; height: 18px; }
+    .theme-btn { border-color: var(--line); background: var(--surface); font-size: 1.05rem; }
+
+    /* ---------- Intro ---------- */
+    .intro { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 18px 32px; padding-top: 8px; }
+    .intro h1 { font-size: clamp(1.9rem, 4vw, 2.6rem); line-height: 1.1; font-weight: 700; }
+    .intro h1 em { font-style: normal; color: var(--accent-text); }
+    .intro p { margin: 8px 0 0; color: var(--muted); font-size: 1.02rem; }
+    .stats { display: flex; flex-wrap: wrap; gap: 10px; }
+    .stat { display: flex; align-items: center; gap: 10px; padding: 10px 16px 10px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); }
+    .stat-emoji { font-size: 1.4rem; }
+    .stat-value { font-family: var(--font-display); font-weight: 600; font-size: 1.2rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .stat-label { font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+
+    /* ---------- Buttons ---------- */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      height: 42px; padding: 0 18px; border-radius: 12px; border: 0;
+      font-family: var(--font-display); font-weight: 600; font-size: .98rem; letter-spacing: .01em;
+      transition: transform .12s, box-shadow .12s, background-color .15s; white-space: nowrap;
+    }
+    .btn-primary { background: var(--accent); color: var(--on-accent); box-shadow: 0 3px 0 var(--accent-deep); }
+    .btn-primary:hover { filter: brightness(1.04); }
+    .btn-primary:active { transform: translateY(3px); box-shadow: 0 0 0 var(--accent-deep); }
+    .btn-ghost { background: transparent; color: var(--muted); }
+    .btn-ghost:hover { background: var(--surface-2); color: var(--text); }
+    .btn-danger { background: var(--danger); color: #fff; box-shadow: 0 3px 0 color-mix(in srgb, var(--danger) 65%, #000); }
+    .btn-danger:active { transform: translateY(3px); box-shadow: none; }
+
+    /* ---------- Section heads ---------- */
+    .section-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; }
+    .section-head h2 { font-size: 1.45rem; }
+    .section-head p { margin: 2px 0 0; color: var(--muted); font-size: .92rem; }
+    .head-tools { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+
+    /* ---------- Habits panel ---------- */
+    .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow); padding: 22px; display: flex; flex-direction: column; gap: 18px; }
+    .progress { display: flex; align-items: center; gap: 10px; width: 200px; }
+    .progress-track { flex: 1; height: 10px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+    .progress-fill { height: 100%; width: 0; border-radius: inherit; background: var(--accent); transition: width .4s ease; }
+    .progress-text { font-weight: 800; font-size: .85rem; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 2.6em; text-align: right; }
+
+    .garden {
+      display: flex; border: 2px dashed var(--line-strong); border-radius: var(--r-md); overflow: hidden;
+      background: linear-gradient(to top, var(--soil) 0 12px, var(--surface-2) 12px);
+    }
+    .plot {
+      flex: 1 1 0; min-width: 48px; height: 76px; display: grid; place-items: end center; padding-bottom: 8px;
+      font-size: 2rem; line-height: 1; background: transparent; border: 0; border-right: 2px dashed var(--line);
+      transition: background-color .15s;
+    }
+    .plot:last-child { border-right: 0; }
+    .plot:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+    .plot .seed { opacity: .4; filter: grayscale(1); font-size: 1.4rem; }
+    .garden-empty { flex: 1; min-height: 76px; display: grid; place-items: center; text-align: center; padding: 8px 12px 18px; color: var(--muted); font-weight: 700; font-size: .92rem; }
+
+    .habit-list { display: flex; flex-direction: column; }
+    .habit { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 12px 18px; padding: 14px 0; border-top: 1px solid var(--line); }
+    .habit:first-child { border-top: 0; padding-top: 2px; }
+    .check {
+      width: 46px; height: 46px; border-radius: 13px; display: grid; place-items: center;
+      border: 2px solid var(--line-strong); background: var(--surface); color: var(--on-accent);
+      transition: background-color .15s, border-color .15s, transform .12s;
+    }
+    .check:hover { border-color: var(--accent); }
+    .check:active { transform: scale(.9); }
+    .check svg { width: 24px; height: 24px; opacity: 0; transition: opacity .15s; }
+    .habit.is-done .check { background: var(--accent); border-color: var(--accent); box-shadow: 0 3px 0 var(--accent-deep); }
+    .habit.is-done .check svg { opacity: 1; }
+    .habit-info { min-width: 0; }
+    .habit-name { font-weight: 800; font-size: 1.05rem; overflow-wrap: anywhere; display: flex; align-items: center; gap: 8px; }
+    .habit-name .emoji { font-size: 1.3rem; line-height: 1; }
+    .habit.is-done .habit-name .label { color: var(--accent-text); }
+    .habit-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .84rem; color: var(--muted); font-weight: 700; margin-top: 2px; }
+    .streak-hot { color: var(--text); }
+
+    .week { display: flex; gap: 6px; }
+    .day { display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: 0; padding: 0; }
+    .day-label { font-size: .66rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+    .day-box { width: 30px; height: 30px; border-radius: 9px; background: var(--surface-2); display: grid; place-items: center; font-size: 1rem; transition: background-color .15s; }
+    .day:hover .day-box { background: var(--line); }
+    .day.on .day-box { background: var(--accent-soft); }
+    .day.is-today .day-box { box-shadow: inset 0 0 0 2px var(--accent); }
+
+    .row-actions { display: flex; gap: 2px; }
+    .icon-btn[aria-expanded="true"] { background: var(--accent-soft); color: var(--text); }
+
+    .history { grid-column: 1 / -1; overflow-x: auto; padding: 2px 0 2px 64px; }
+    .history-grid { display: grid; grid-template-rows: repeat(7, 12px); grid-auto-flow: column; grid-auto-columns: 12px; gap: 3px; width: max-content; }
+    .cell { border-radius: 3px; background: var(--surface-2); }
+    .cell.on { background: var(--accent); }
+    .cell.future { background: transparent; }
+    .history-caption { font-size: .78rem; color: var(--muted); font-weight: 700; margin-top: 6px; }
+
+    .suggestions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: var(--muted); font-weight: 700; font-size: .9rem; }
+    .chip-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 99px; border: 1px dashed var(--line-strong); background: transparent; font-weight: 700; font-size: .88rem; color: var(--text); }
+    .chip-btn:hover { border-color: var(--accent); background: var(--accent-soft); }
+
+    /* ---------- Board ---------- */
+    .board { display: flex; flex-direction: column; gap: 16px; }
+    .columns { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; align-items: start; }
+    .column { background: var(--surface-2); border-radius: var(--r-lg); padding: 12px; display: flex; flex-direction: column; gap: 10px; transition: box-shadow .15s, background-color .15s; }
+    .column.drop-hover { box-shadow: inset 0 0 0 2px var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface-2)); }
+    .column-head { display: flex; align-items: center; gap: 8px; padding: 4px 4px 0; }
+    .column-head h3 { font-size: 1.02rem; display: flex; align-items: center; gap: 8px; }
+    .column-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+    .count { margin-left: auto; font-size: .78rem; font-weight: 800; color: var(--muted); background: var(--surface); border-radius: 99px; padding: 1px 9px; font-variant-numeric: tabular-nums; }
+    .tasks { display: flex; flex-direction: column; gap: 8px; min-height: 64px; }
+    .task {
+      background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md);
+      padding: 12px 8px 12px 14px; cursor: grab; display: flex; gap: 6px; align-items: flex-start;
+      box-shadow: 0 1px 0 var(--line); transition: border-color .15s, transform .15s, opacity .15s;
+    }
+    .task:hover { border-color: var(--line-strong); }
+    .task.dragging { opacity: .45; transform: rotate(-1.5deg); }
+    .task-body { min-width: 0; flex: 1; padding-top: 3px; }
+    .task-title { font-weight: 700; overflow-wrap: anywhere; line-height: 1.35; }
+    .task-desc { color: var(--muted); font-size: .88rem; margin-top: 4px; overflow-wrap: anywhere; white-space: pre-line; }
+    .task.done .task-title { text-decoration: line-through; text-decoration-thickness: 2px; color: var(--muted); }
+    .task .row-actions { opacity: .45; transition: opacity .15s; }
+    .task:hover .row-actions, .task:focus-within .row-actions { opacity: 1; }
+    .task .icon-btn { width: 30px; height: 30px; }
+    .task .icon-btn svg { width: 16px; height: 16px; }
+    .column-empty { min-height: 64px; display: grid; place-items: center; text-align: center; padding: 10px; color: var(--muted); font-size: .86rem; font-weight: 700; border: 2px dashed var(--line-strong); border-radius: var(--r-md); }
+    .add-task { height: 38px; border-radius: 11px; border: 0; background: transparent; color: var(--muted); font-weight: 800; text-align: left; padding: 0 10px; }
+    .add-task:hover { background: var(--surface); color: var(--text); }
+
+    /* ---------- Modals ---------- */
+    .modal { position: fixed; inset: 0; z-index: 50; background: var(--overlay); display: flex; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(3px); }
+    .sheet { width: 100%; max-width: 440px; max-height: calc(100vh - 32px); overflow-y: auto; background: var(--surface); border-radius: var(--r-lg); padding: 24px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 14px; animation: popup .22s ease-out; }
+    .sheet h2 { font-size: 1.35rem; }
+    .sheet p { margin: 0; color: var(--muted); }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field-label { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+    .input { width: 100%; padding: 11px 14px; border-radius: 12px; font: inherit; font-size: .95rem; background: var(--bg); color: var(--text); border: 2px solid var(--line); outline: none; transition: border-color .15s; }
+    .input:focus { border-color: var(--accent); }
+    textarea.input { resize: vertical; min-height: 90px; }
+    .sheet-actions { display: flex; justify-content: flex-end; gap: 8px; padding-top: 4px; }
+
+    .emoji-picker { max-height: 236px; overflow-y: auto; padding: 2px 8px 8px; border: 2px solid var(--line); border-radius: 12px; background: var(--bg); }
+    .emoji-group-label { font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 8px 2px 4px; }
+    .emoji-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: 2px; }
+    .emoji-opt { height: 38px; border: 0; border-radius: 9px; background: transparent; font-size: 1.3rem; }
+    .emoji-opt:hover { background: var(--surface-2); }
+    .emoji-opt[aria-pressed="true"] { background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--accent); }
+    .emoji-row { display: flex; align-items: flex-end; gap: 10px; }
+    .emoji-preview { width: 48px; height: 48px; flex: none; display: grid; place-items: center; font-size: 1.6rem; background: var(--accent-soft); border-radius: 12px; }
+
+    /* ---------- Motion ---------- */
+    @keyframes popup { from { transform: scale(.95); opacity: 0 } to { transform: scale(1); opacity: 1 } }
+    @keyframes bloom { 0% { transform: scale(.2) translateY(12px); opacity: 0 } 70% { transform: scale(1.2) } 100% { transform: scale(1); opacity: 1 } }
+    .bloom { display: inline-block; animation: bloom .45s ease-out; transform-origin: bottom center; }
+    @keyframes fall { to { transform: translate(var(--dx), 105vh) rotate(var(--rot)); } }
+    .confetti { position: fixed; top: -2.5rem; pointer-events: none; z-index: 60; font-size: 1.5rem; animation: fall var(--dur) ease-in forwards; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+      .confetti { display: none; }
+    }
+
+    /* ---------- Responsive ---------- */
+    @media (max-width: 1000px) { .columns { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 760px) {
+      .habit { grid-template-columns: auto minmax(0, 1fr) auto; }
+      .week { grid-column: 1 / -1; grid-row: 2; justify-content: space-between; }
+      .history { padding-left: 0; }
+      .today { display: none; }
+    }
+    @media (max-width: 560px) {
+      .columns { grid-template-columns: minmax(0, 1fr); }
+      .panel { padding: 16px; }
+      .head-tools, .progress { width: 100%; }
+      .head-tools .btn { width: 100%; }
+      .stats { width: 100%; }
+      .stat { flex: 1 1 0; min-width: 0; padding: 8px 10px; gap: 8px; }
+      .stat-emoji { font-size: 1.15rem; }
+      .day-box { width: 34px; height: 34px; }
+      .row-actions .icon-btn { width: 32px; }
+    }
+  </style>
 </head>
-<body class="bg-gray-50 dark:bg-gray-950 min-h-screen p-8 text-gray-900 dark:text-gray-100 transition-colors duration-300">
-  <div class="flex items-center justify-between max-w-7xl mx-auto mb-4">
-    <h1 class="text-3xl font-bold mt-3 mb-6 text-gray-800 dark:text-gray-100">
-      📋 Task Flow
-    </h1>
-    <button id="themeToggle"
-            class="mt-3 mb-6 inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-            aria-label="Alternar tema"
-            onclick="toggleTheme()">
-      <span id="themeIcon" aria-hidden="true">🌙</span>
-    </button>
-  </div>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">🌱</span> Task Flow</div>
+      <div class="topbar-right">
+        <span class="today" id="todayLabel"></span>
+        <button id="themeToggle" class="icon-btn theme-btn" aria-label="Toggle theme" onclick="toggleTheme()">
+          <span id="themeIcon" aria-hidden="true">🌙</span>
+        </button>
+      </div>
+    </header>
 
-  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 max-w-7xl mx-auto">
-    <!-- Backlog Column -->
-    <div class="kanban-column bg-red-50 dark:bg-red-950/30 p-4 rounded-xl flex flex-col h-full shadow-sm border border-gray-100 dark:border-gray-800 transition-colors">
-      <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-600 dark:text-gray-300">
-        <span class="text-xl">📥</span> Backlog
-      </h2>
-      <div class="tasks flex-1 min-h-[120px] space-y-2" data-status="backlog" ondragover="allowDrop(event)" ondrop="drop(event)"></div>
-      <button onclick="openModal('backlog')" class="mt-4 bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-4 py-2.5 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-700 w-full transition-all text-sm font-medium">
-        ＋ Add Task
-      </button>
-    </div>
+    <section class="intro" aria-labelledby="greeting">
+      <div>
+        <h1 id="greeting">Grow a little today</h1>
+        <p id="introLine">Tick a habit and a flower grows in your garden.</p>
+      </div>
+      <div class="stats" id="stats"></div>
+    </section>
 
-    <!-- Todo Column -->
-    <div class="kanban-column bg-orange-50 dark:bg-yellow-900/40 p-4 rounded-xl flex flex-col h-full shadow-sm border border-gray-100 dark:border-gray-800 transition-colors">
-      <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-600 dark:text-gray-300">
-        <span class="text-xl">📌</span> Todo
-      </h2>
-      <div class="tasks flex-1 min-h-[120px] space-y-2" data-status="todo" ondragover="allowDrop(event)" ondrop="drop(event)"></div>
-      <button onclick="openModal('todo')" class="mt-4 bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-4 py-2.5 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-700 w-full transition-all text-sm font-medium">
-        ＋ Add Task
-      </button>
-    </div>
+    <!-- Habits -->
+    <section class="panel" aria-labelledby="habitsTitle">
+      <div class="section-head">
+        <div>
+          <h2 id="habitsTitle">🌻 Habits</h2>
+          <p>Every habit you tick today plants a flower.</p>
+        </div>
+        <div class="head-tools">
+          <div class="progress" id="habitProgress" hidden>
+            <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+            <span class="progress-text" id="progressText">0/0</span>
+          </div>
+          <button class="btn btn-primary" onclick="openHabitModal()">＋ New habit</button>
+        </div>
+      </div>
+      <div class="garden" id="garden" aria-label="Today's garden"></div>
+      <div class="habit-list" id="habitList"></div>
+    </section>
 
-    <!-- In Progress Column -->
-    <div class="kanban-column bg-blue-50 dark:bg-blue-950/30 p-4 rounded-xl flex flex-col h-full shadow-sm border border-gray-100 dark:border-gray-800 transition-colors">
-      <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-600 dark:text-gray-300">
-        <span class="text-xl">🚀</span> In Progress
-      </h2>
-      <div class="tasks flex-1 min-h-[120px] space-y-2" data-status="in-progress" ondragover="allowDrop(event)" ondrop="drop(event)"></div>
-      <button onclick="openModal('in-progress')" class="mt-4 bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-4 py-2.5 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-700 w-full transition-all text-sm font-medium">
-        ＋ Add Task
-      </button>
-    </div>
-
-    <!-- Done Column -->
-    <div class="kanban-column bg-green-50 dark:bg-green-950/30 p-4 rounded-xl flex flex-col h-full shadow-sm border border-gray-100 dark:border-gray-800 transition-colors">
-      <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-600 dark:text-gray-300">
-        <span class="text-xl">✅</span> Done
-      </h2>
-      <div class="tasks flex-1 min-h-[120px] space-y-2" data-status="done" ondragover="allowDrop(event)" ondrop="drop(event)"></div>
-      <button onclick="openModal('done')" class="mt-4 bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-4 py-2.5 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-700 w-full transition-all text-sm font-medium">
-        ＋ Add Task
-      </button>
-    </div>
+    <!-- Tasks -->
+    <section class="board" aria-labelledby="tasksTitle">
+      <div class="section-head">
+        <div>
+          <h2 id="tasksTitle">📋 Tasks</h2>
+          <p id="taskSummary"></p>
+        </div>
+        <div class="head-tools">
+          <button class="btn btn-primary" onclick="openModal('todo')">＋ New task</button>
+        </div>
+      </div>
+      <div class="columns" id="columns"></div>
+    </section>
   </div>
 
   <!-- Add Task Modal -->
-  <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center backdrop-blur-sm">
-    <div class="bg-white dark:bg-gray-900 p-6 rounded-xl w-96 shadow-2xl border border-gray-100 dark:border-gray-800 transition-colors">
-      <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-700 dark:text-gray-200">
-        ✨ New Task
-      </h2>
-      <input type="text" id="taskTitle" placeholder="Task title" class="w-full mb-3 p-2.5 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-1 focus:ring-blue-400 focus:border-blue-400 dark:bg-gray-800 dark:placeholder-gray-400 text-sm">
-      <textarea id="taskDesc" placeholder="Task description" class="w-full mb-4 p-2.5 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-1 focus:ring-blue-400 focus:border-blue-400 h-24 dark:bg-gray-800 dark:placeholder-gray-400 text-sm"></textarea>
-      <div class="flex justify-end gap-2">
-        <button onclick="closeModal()" class="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all text-sm">
-          Cancel
-        </button>
-        <button onclick="addTask()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-all text-sm font-medium">
-          Add Task
-        </button>
+  <div id="modal" class="modal" hidden onclick="if (event.target === this) closeModal()">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <h2 id="modalTitle">✨ New task</h2>
+      <label class="field"><span class="field-label">Title</span>
+        <input type="text" id="taskTitle" placeholder="What needs doing?" class="input">
+      </label>
+      <label class="field"><span class="field-label">Description</span>
+        <textarea id="taskDesc" placeholder="Details, links, notes (optional)" class="input"></textarea>
+      </label>
+      <label class="field"><span class="field-label">Column</span>
+        <select id="taskStatus" class="input"></select>
+      </label>
+      <div class="sheet-actions">
+        <button onclick="closeModal()" class="btn btn-ghost">Cancel</button>
+        <button onclick="addTask()" class="btn btn-primary">Add task</button>
       </div>
     </div>
   </div>
 
   <!-- Edit Task Modal -->
-  <div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center backdrop-blur-sm">
-    <div class="bg-white dark:bg-gray-900 p-6 rounded-xl w-96 shadow-2xl border border-gray-100 dark:border-gray-800 transition-colors">
-      <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-700 dark:text-gray-200">
-        ✏️ Edit Task
-      </h2>
+  <div id="editModal" class="modal" hidden onclick="if (event.target === this) closeEditModal()">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
+      <h2 id="editModalTitle">✏️ Edit task</h2>
       <input type="hidden" id="editTaskId">
-      <input type="text" id="editTaskTitle" placeholder="Task title" class="w-full mb-3 p-2.5 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-1 focus:ring-blue-400 focus:border-blue-400 text-sm dark:bg-gray-800 dark:placeholder-gray-400">
-      <textarea id="editTaskDesc" placeholder="Task description" class="w-full mb-4 p-2.5 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-1 focus:ring-blue-400 focus:border-blue-400 h-24 text-sm dark:bg-gray-800 dark:placeholder-gray-400"></textarea>
-      <div class="flex justify-end gap-2">
-        <button onclick="closeEditModal()" class="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all text-sm">
-          Cancel
-        </button>
-        <button onclick="saveEditedTask()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-all text-sm font-medium">
-          Save Changes
-        </button>
+      <label class="field"><span class="field-label">Title</span>
+        <input type="text" id="editTaskTitle" placeholder="What needs doing?" class="input">
+      </label>
+      <label class="field"><span class="field-label">Description</span>
+        <textarea id="editTaskDesc" placeholder="Details, links, notes (optional)" class="input"></textarea>
+      </label>
+      <label class="field"><span class="field-label">Column</span>
+        <select id="editTaskStatus" class="input"></select>
+      </label>
+      <div class="sheet-actions">
+        <button onclick="closeEditModal()" class="btn btn-ghost">Cancel</button>
+        <button onclick="saveEditedTask()" class="btn btn-primary">Save changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Habit Modal (add/edit) -->
+  <div id="habitModal" class="modal" hidden onclick="if (event.target === this) closeHabitModal()">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="habitModalTitle">
+      <h2 id="habitModalTitle">🌱 New habit</h2>
+      <input type="hidden" id="habitId">
+      <div class="emoji-row">
+        <span class="emoji-preview" id="emojiPreview" aria-hidden="true">🏃</span>
+        <label class="field" style="flex:1"><span class="field-label">Habit</span>
+          <input type="text" id="habitName" placeholder="e.g. Read 10 pages" class="input">
+        </label>
+      </div>
+      <div class="field">
+        <span class="field-label">Emoji</span>
+        <div class="emoji-picker" id="emojiPicker"></div>
+      </div>
+      <label class="field"><span class="field-label">Or type any emoji</span>
+        <input type="text" id="habitEmojiCustom" placeholder="Paste an emoji" class="input" oninput="customEmoji(this.value)">
+      </label>
+      <div class="sheet-actions">
+        <button onclick="closeHabitModal()" class="btn btn-ghost">Cancel</button>
+        <button onclick="saveHabit()" class="btn btn-primary">Save habit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete habit confirm -->
+  <div id="confirmModal" class="modal" hidden onclick="if (event.target === this) closeConfirm()">
+    <div class="sheet" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <h2 id="confirmTitle">Delete habit?</h2>
+      <p id="confirmText"></p>
+      <div class="sheet-actions">
+        <button onclick="closeConfirm()" class="btn btn-ghost">Keep it</button>
+        <button onclick="confirmDelete()" class="btn btn-danger">Delete</button>
       </div>
     </div>
   </div>
 
   <script>
+    // ---- Helpers ----
+    function escapeHtml(str) {
+      return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function loadJSON(key, fallback) {
+      try {
+        const value = JSON.parse(localStorage.getItem(key));
+        return value ?? fallback;
+      } catch { return fallback; }
+    }
+
+    function store(key, value) {
+      try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+    }
+
+    const ICONS = {
+      check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+      edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>',
+      trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
+      grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/></svg>',
+    };
+
     // ---- Tema (dark mode) ----
+    // Mantém a chave 'theme' ('dark' | 'light') usada desde a primeira versão
+    function isDarkNow() {
+      const t = document.documentElement.dataset.theme;
+      return t ? t === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+
     function setTheme(mode) {
-      const root = document.documentElement;
-      if (mode === 'dark') root.classList.add('dark'); else root.classList.remove('dark');
+      document.documentElement.dataset.theme = mode;
       try { localStorage.setItem('theme', mode); } catch {}
       updateToggleIcon();
     }
 
     function toggleTheme() {
-      const isDark = document.documentElement.classList.contains('dark');
-      setTheme(isDark ? 'light' : 'dark');
+      setTheme(isDarkNow() ? 'light' : 'dark');
     }
 
     function updateToggleIcon() {
       const icon = document.getElementById('themeIcon');
-      const isDark = document.documentElement.classList.contains('dark');
-      if (icon) icon.textContent = isDark ? '☀️' : '🌙';
+      if (icon) icon.textContent = isDarkNow() ? '☀️' : '🌙';
     }
 
-    (function initTheme() {
-      try {
-        const saved = localStorage.getItem('theme');
-        const isDark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
-        setTheme(isDark ? 'dark' : 'light');
-      } catch { updateToggleIcon(); }
-    })();
-
     // ---- Kanban ----
-    let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+    // Mesmo formato salvo desde a primeira versão: localStorage 'tasks' = [{ id, title, description, status }]
+    const COLUMNS = [
+      { status: 'backlog',     label: 'Backlog',     icon: '📥', color: 'var(--col-backlog)',  empty: 'Ideas and someday tasks' },
+      { status: 'todo',        label: 'Todo',        icon: '📌', color: 'var(--col-todo)',     empty: 'Next up' },
+      { status: 'in-progress', label: 'In Progress', icon: '🚀', color: 'var(--col-progress)', empty: 'Drag a task here to start it' },
+      { status: 'done',        label: 'Done',        icon: '✅', color: 'var(--col-done)',     empty: 'Finished tasks land here' },
+    ];
+
+    let tasks = loadJSON('tasks', []);
+    if (!Array.isArray(tasks)) tasks = [];
     let draggedTask = null;
-    let currentStatus = 'backlog';
+
+    // Tarefas com status desconhecido aparecem no Backlog, sem alterar o dado salvo
+    function statusOf(task) {
+      return COLUMNS.some(c => c.status === task.status) ? task.status : 'backlog';
+    }
+
+    function statusOptions(selected) {
+      return COLUMNS.map(c => `<option value="${c.status}" ${c.status === selected ? 'selected' : ''}>${c.icon} ${c.label}</option>`).join('');
+    }
 
     function saveTasks() {
-      localStorage.setItem('tasks', JSON.stringify(tasks));
+      store('tasks', tasks);
       renderTasks();
+      renderSummary();
+    }
+
+    function renderColumns() {
+      document.getElementById('columns').innerHTML = COLUMNS.map(col => `
+        <div class="column" data-status="${col.status}"
+             ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="drop(event)">
+          <div class="column-head">
+            <h3><span class="column-dot" style="background:${col.color}"></span>${col.icon} ${col.label}</h3>
+            <span class="count" data-count="${col.status}">0</span>
+          </div>
+          <div class="tasks" data-status="${col.status}"></div>
+          <button class="add-task" onclick="openModal('${col.status}')">＋ Add task</button>
+        </div>
+      `).join('');
     }
 
     function renderTasks() {
-      document.querySelectorAll('.tasks').forEach(column => {
-        const status = column.dataset.status;
-        column.innerHTML = tasks
-          .filter(task => task.status === status)
-          .map(task => `
-            <div draggable="true" ondragstart="drag(event)" data-id="${task.id}"
-                 class="task bg-white dark:bg-gray-800 p-4 mb-2 rounded shadow-sm cursor-move transition-colors">
-              <div class="flex justify-between items-start gap-3">
-                <div class="min-w-0">
-                  <h3 class="font-bold break-words">${task.title}</h3>
-                  <p class="text-gray-600 dark:text-gray-300 text-sm break-words">${task.description || ''}</p>
-                </div>
-                <div class="flex gap-2 shrink-0">
-                  <button onclick="openEditModal('${task.id}')" class="text-blue-500 hover:text-blue-700 dark:hover:text-blue-400" title="Editar">✎</button>
-                  <button onclick="deleteTask('${task.id}')" class="text-red-500 hover:text-red-700" title="Excluir">×</button>
-                </div>
+      COLUMNS.forEach(col => {
+        const list = tasks.filter(task => statusOf(task) === col.status);
+        document.querySelector(`[data-count="${col.status}"]`).textContent = list.length;
+        document.querySelector(`.tasks[data-status="${col.status}"]`).innerHTML = list.length ? list.map(task => `
+            <div class="task ${col.status === 'done' ? 'done' : ''}" draggable="true" ondragstart="drag(event)" ondragend="dragEnd()" data-id="${escapeHtml(task.id)}">
+              <div class="task-body">
+                <div class="task-title">${escapeHtml(task.title)}</div>
+                ${task.description ? `<div class="task-desc">${escapeHtml(task.description)}</div>` : ''}
+              </div>
+              <div class="row-actions">
+                <button class="icon-btn" onclick="openEditModal('${escapeHtml(task.id)}')" title="Edit" aria-label="Edit task">${ICONS.edit}</button>
+                <button class="icon-btn danger" onclick="deleteTask('${escapeHtml(task.id)}')" title="Delete" aria-label="Delete task">${ICONS.trash}</button>
               </div>
             </div>
-          `).join('');
+          `).join('') : `<div class="column-empty">${col.empty}</div>`;
       });
+
+      const done = tasks.filter(t => statusOf(t) === 'done').length;
+      document.getElementById('taskSummary').textContent = tasks.length
+        ? `${done} of ${tasks.length} done. Drag cards between columns.`
+        : 'Add your first task to get started.';
     }
 
     function openModal(status) {
-      currentStatus = status;
-      document.getElementById('modal').classList.remove('hidden');
+      document.getElementById('taskStatus').innerHTML = statusOptions(status);
+      document.getElementById('modal').hidden = false;
+      document.getElementById('taskTitle').focus();
     }
 
     function closeModal() {
-      document.getElementById('modal').classList.add('hidden');
+      document.getElementById('modal').hidden = true;
     }
 
     function addTask() {
       const title = document.getElementById('taskTitle').value.trim();
       const desc = document.getElementById('taskDesc').value.trim();
+      const status = document.getElementById('taskStatus').value;
 
       if (title) {
         tasks.push({
           id: Date.now().toString(),
           title,
           description: desc,
-          status: currentStatus
+          status
         });
         saveTasks();
         closeModal();
@@ -212,22 +562,39 @@
       saveTasks();
     }
 
-    function allowDrop(ev) { ev.preventDefault(); }
+    function allowDrop(ev) {
+      ev.preventDefault();
+      ev.currentTarget.classList.add('drop-hover');
+    }
+
+    function dragLeave(ev) {
+      if (!ev.currentTarget.contains(ev.relatedTarget)) ev.currentTarget.classList.remove('drop-hover');
+    }
 
     function drag(ev) {
       const taskElement = ev.target.closest('.task');
       draggedTask = tasks.find(task => task.id === taskElement.dataset.id);
+      requestAnimationFrame(() => taskElement.classList.add('dragging'));
+    }
+
+    function dragEnd() {
+      draggedTask = null;
+      document.querySelectorAll('.drop-hover').forEach(el => el.classList.remove('drop-hover'));
+      document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
     }
 
     function drop(ev) {
       ev.preventDefault();
-      const container = ev.target.closest('.tasks');
+      const container = ev.target.closest('.column');
       if (!container) return;
+      container.classList.remove('drop-hover');
       const newStatus = container.dataset.status;
 
       if (draggedTask) {
+        const wasDone = draggedTask.status === 'done';
         draggedTask.status = newStatus;
         saveTasks();
+        if (newStatus === 'done' && !wasDone) celebrate(['✅', '🎉', '✨', '🌟']);
       }
     }
 
@@ -236,13 +603,15 @@
       if (task) {
         document.getElementById('editTaskId').value = task.id;
         document.getElementById('editTaskTitle').value = task.title;
-        document.getElementById('editTaskDesc').value = task.description;
-        document.getElementById('editModal').classList.remove('hidden');
+        document.getElementById('editTaskDesc').value = task.description || '';
+        document.getElementById('editTaskStatus').innerHTML = statusOptions(statusOf(task));
+        document.getElementById('editModal').hidden = false;
+        document.getElementById('editTaskTitle').focus();
       }
     }
 
     function closeEditModal() {
-      document.getElementById('editModal').classList.add('hidden');
+      document.getElementById('editModal').hidden = true;
       document.getElementById('editTaskId').value = '';
       document.getElementById('editTaskTitle').value = '';
       document.getElementById('editTaskDesc').value = '';
@@ -252,20 +621,376 @@
       const taskId = document.getElementById('editTaskId').value;
       const newTitle = document.getElementById('editTaskTitle').value.trim();
       const newDesc = document.getElementById('editTaskDesc').value.trim();
+      const newStatus = document.getElementById('editTaskStatus').value;
 
       if (taskId && newTitle) {
         const taskIndex = tasks.findIndex(t => t.id === taskId);
         if (taskIndex > -1) {
+          const wasDone = tasks[taskIndex].status === 'done';
           tasks[taskIndex].title = newTitle;
           tasks[taskIndex].description = newDesc;
+          tasks[taskIndex].status = newStatus;
           saveTasks();
           closeEditModal();
+          if (newStatus === 'done' && !wasDone) celebrate(['✅', '🎉', '✨', '🌟']);
         }
       }
     }
 
+    // ---- Habits ----
+    // localStorage 'habits' = [{ id, name, emoji, createdAt, log: { 'YYYY-MM-DD': true } }]
+    const EMOJI_GROUPS = [
+      { label: 'Health & fitness', items: ['🏃', '🚶', '🚴', '🏊', '🏋️', '🧘', '🤸', '⚽', '🏀', '🎾', '🥾', '🧗', '💪', '🫀', '🦷', '😴', '🛌', '💊', '🩺', '🚭'] },
+      { label: 'Food & drink', items: ['💧', '🥗', '🍎', '🥦', '🥕', '🍳', '🥤', '🍵', '☕', '🚫', '🍷', '🍬', '🥛', '🍌', '🥑', '🍲'] },
+      { label: 'Mind & learning', items: ['📚', '📖', '✍️', '📝', '🧠', '🎓', '🌍', '🗣️', '🔤', '🧩', '♟️', '🎧', '🙏', '😊', '🌞', '🌙'] },
+      { label: 'Work & money', items: ['💻', '⌨️', '📈', '💰', '🏦', '📧', '📅', '⏰', '🎯', '🚀', '🛠️', '📊', '🗂️', '📵', '🔕', '⏳'] },
+      { label: 'Home & life', items: ['🧹', '🧺', '🛁', '🪥', '🌱', '🪴', '🐕', '🐈', '👶', '👨‍👩‍👧', '📞', '💌', '🛒', '🧾', '🔑', '♻️'] },
+      { label: 'Creative & fun', items: ['🎸', '🎹', '🎨', '📷', '🎬', '🎮', '🧶', '🪡', '🎤', '💃', '🎲', '🪁', '🌈', '⭐', '🔥', '🎉'] },
+    ];
+    const FLOWERS = ['🌻', '🌺', '🌷', '🌸', '🌼', '🌹', '💐', '🪻', '🏵️', '🪷', '🍀', '🌵'];
+    const GRID_WEEKS = 20;
+    const SUGGESTIONS = [
+      { emoji: '💧', name: 'Drink 2L of water' },
+      { emoji: '📚', name: 'Read 10 pages' },
+      { emoji: '🏃', name: 'Workout' },
+      { emoji: '🧘', name: 'Meditate 5 min' },
+      { emoji: '😴', name: 'In bed by 23:00' },
+    ];
+
+    let habits = loadJSON('habits', []);
+    if (!Array.isArray(habits)) habits = [];
+    habits.forEach(h => { if (!h.log || typeof h.log !== 'object') h.log = {}; });
+    let selectedEmoji = EMOJI_GROUPS[0].items[0];
+    const expandedHabits = new Set();
+    let pendingDeleteId = null;
+    let bloomId = null;
+
+    function dayKey(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function addDays(date, n) {
+      const d = new Date(date);
+      d.setDate(d.getDate() + n);
+      return d;
+    }
+
+    function todayKey() { return dayKey(new Date()); }
+
+    function flowerFor(habit, key) {
+      let hash = 0;
+      for (const ch of habit.id + key) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+      return FLOWERS[hash % FLOWERS.length];
+    }
+
+    // Sequência atual: conta até hoje, ou até ontem se hoje ainda não foi marcado
+    function currentStreak(habit) {
+      let day = new Date();
+      if (!habit.log[dayKey(day)]) day = addDays(day, -1);
+      let streak = 0;
+      while (habit.log[dayKey(day)]) { streak++; day = addDays(day, -1); }
+      return streak;
+    }
+
+    function bestStreak(habit) {
+      const keys = Object.keys(habit.log).filter(k => habit.log[k]).sort();
+      let best = 0, run = 0, prev = null;
+      keys.forEach(k => {
+        run = prev && dayKey(addDays(new Date(prev + 'T00:00:00'), 1)) === k ? run + 1 : 1;
+        best = Math.max(best, run);
+        prev = k;
+      });
+      return best;
+    }
+
+    function saveHabits() {
+      store('habits', habits);
+      renderHabits();
+      renderSummary();
+    }
+
+    function toggleHabit(id, key = todayKey()) {
+      const habit = habits.find(h => h.id === id);
+      if (!habit) return;
+      if (habit.log[key]) {
+        delete habit.log[key];
+      } else {
+        habit.log[key] = true;
+        if (key === todayKey()) {
+          bloomId = habit.id;
+          celebrate([flowerFor(habit, key), habit.emoji, '✨']);
+        }
+      }
+      saveHabits();
+      bloomId = null;
+    }
+
+    function renderGarden() {
+      const key = todayKey();
+      const garden = document.getElementById('garden');
+      if (!habits.length) {
+        garden.innerHTML = `<div class="garden-empty">🌱 Your garden is empty. Add a habit to plant the first seed.</div>`;
+        return;
+      }
+      garden.innerHTML = habits.map(h => `
+        <button class="plot" onclick="toggleHabit('${escapeHtml(h.id)}')" title="${escapeHtml(h.name)}"
+                aria-label="${escapeHtml(h.name)}: ${h.log[key] ? 'done today' : 'not done yet'}">
+          ${h.log[key]
+            ? `<span class="${bloomId === h.id ? 'bloom' : ''}">${flowerFor(h, key)}</span>`
+            : `<span class="seed">🌱</span>`}
+        </button>
+      `).join('');
+    }
+
+    function renderWeek(habit) {
+      const today = new Date();
+      return Array.from({ length: 7 }, (_, i) => {
+        const d = addDays(today, i - 6);
+        const key = dayKey(d);
+        const on = !!habit.log[key];
+        const label = d.toLocaleDateString('en', { weekday: 'narrow' });
+        return `
+          <button class="day ${on ? 'on' : ''} ${i === 6 ? 'is-today' : ''}" onclick="toggleHabit('${escapeHtml(habit.id)}', '${key}')"
+                  title="${d.toLocaleDateString('en', { weekday: 'long', month: 'short', day: 'numeric' })}" aria-pressed="${on}">
+            <span class="day-label">${label}</span>
+            <span class="day-box">${on ? flowerFor(habit, key) : ''}</span>
+          </button>`;
+      }).join('');
+    }
+
+    // Habit Grid estilo "don't break the chain": colunas = semanas (dom → sáb), linhas = dias
+    function renderHistory(habit) {
+      const today = new Date();
+      const start = addDays(today, -today.getDay() - (GRID_WEEKS - 1) * 7);
+      const cells = [];
+      let count = 0;
+      for (let i = 0; i < GRID_WEEKS * 7; i++) {
+        const d = addDays(start, i);
+        const key = dayKey(d);
+        const future = d > today;
+        if (habit.log[key]) count++;
+        cells.push(`<span class="cell ${future ? 'future' : habit.log[key] ? 'on' : ''}" title="${d.toLocaleDateString('en')}"></span>`);
+      }
+      return `
+        <div class="history">
+          <div class="history-grid">${cells.join('')}</div>
+          <div class="history-caption">${count} day${count === 1 ? '' : 's'} in the last ${GRID_WEEKS} weeks</div>
+        </div>`;
+    }
+
+    function renderHabits() {
+      renderGarden();
+      const list = document.getElementById('habitList');
+      const key = todayKey();
+      const doneToday = habits.filter(h => h.log[key]).length;
+
+      document.getElementById('habitProgress').hidden = !habits.length;
+      document.getElementById('progressFill').style.width = habits.length ? `${(doneToday / habits.length) * 100}%` : '0';
+      document.getElementById('progressText').textContent = `${doneToday}/${habits.length}`;
+
+      if (!habits.length) {
+        list.innerHTML = `
+          <div class="suggestions">Try one:
+            ${SUGGESTIONS.map((s, i) => `<button class="chip-btn" onclick="addSuggestion(${i})">${s.emoji} ${escapeHtml(s.name)}</button>`).join('')}
+          </div>`;
+        return;
+      }
+
+      list.innerHTML = habits.map(h => {
+        const done = !!h.log[key];
+        const streak = currentStreak(h);
+        const best = bestStreak(h);
+        const expanded = expandedHabits.has(h.id);
+        const id = escapeHtml(h.id);
+        return `
+          <div class="habit ${done ? 'is-done' : ''}">
+            <button class="check" onclick="toggleHabit('${id}')" aria-pressed="${done}" aria-label="Mark ${escapeHtml(h.name)} as done today">${ICONS.check}</button>
+            <div class="habit-info">
+              <div class="habit-name"><span class="emoji">${escapeHtml(h.emoji)}</span><span class="label">${escapeHtml(h.name)}</span></div>
+              <div class="habit-meta">
+                <span class="${streak ? 'streak-hot' : ''}">🔥 ${streak} day streak</span>
+                <span>🏆 Best ${best}</span>
+              </div>
+            </div>
+            <div class="week">${renderWeek(h)}</div>
+            <div class="row-actions">
+              <button class="icon-btn" onclick="toggleHistory('${id}')" aria-expanded="${expanded}" title="History" aria-label="Show history">${ICONS.grid}</button>
+              <button class="icon-btn" onclick="openHabitModal('${id}')" title="Edit" aria-label="Edit habit">${ICONS.edit}</button>
+              <button class="icon-btn danger" onclick="deleteHabit('${id}')" title="Delete" aria-label="Delete habit">${ICONS.trash}</button>
+            </div>
+            ${expanded ? renderHistory(h) : ''}
+          </div>`;
+      }).join('');
+    }
+
+    function toggleHistory(id) {
+      if (expandedHabits.has(id)) expandedHabits.delete(id); else expandedHabits.add(id);
+      renderHabits();
+    }
+
+    function addSuggestion(i) {
+      const s = SUGGESTIONS[i];
+      habits.push({ id: Date.now().toString(), name: s.name, emoji: s.emoji, createdAt: todayKey(), log: {} });
+      saveHabits();
+    }
+
+    function renderEmojiPicker() {
+      document.getElementById('emojiPreview').textContent = selectedEmoji;
+      document.getElementById('emojiPicker').innerHTML = EMOJI_GROUPS.map(g => `
+        <div class="emoji-group-label">${g.label}</div>
+        <div class="emoji-grid">
+          ${g.items.map(e => `<button type="button" class="emoji-opt" aria-pressed="${e === selectedEmoji}" onclick="pickEmoji('${e}')">${e}</button>`).join('')}
+        </div>
+      `).join('');
+    }
+
+    function markSelectedEmoji(e) {
+      selectedEmoji = e;
+      document.getElementById('emojiPreview').textContent = e;
+      document.querySelectorAll('.emoji-opt').forEach(b => b.setAttribute('aria-pressed', b.textContent === e));
+    }
+
+    function pickEmoji(e) {
+      document.getElementById('habitEmojiCustom').value = '';
+      markSelectedEmoji(e);
+    }
+
+    // Pega só o primeiro emoji digitado/colado
+    function customEmoji(value) {
+      const text = value.trim();
+      if (!text) return;
+      const first = window.Intl && Intl.Segmenter
+        ? [...new Intl.Segmenter().segment(text)][0].segment
+        : [...text][0];
+      markSelectedEmoji(first);
+    }
+
+    function openHabitModal(id) {
+      const habit = habits.find(h => h.id === id);
+      document.getElementById('habitId').value = habit ? habit.id : '';
+      document.getElementById('habitName').value = habit ? habit.name : '';
+      document.getElementById('habitEmojiCustom').value = '';
+      document.getElementById('habitModalTitle').textContent = habit ? '✏️ Edit habit' : '🌱 New habit';
+      selectedEmoji = habit ? habit.emoji : EMOJI_GROUPS[0].items[0];
+      renderEmojiPicker();
+      document.getElementById('habitModal').hidden = false;
+      document.getElementById('habitName').focus();
+    }
+
+    function closeHabitModal() {
+      document.getElementById('habitModal').hidden = true;
+    }
+
+    function saveHabit() {
+      const id = document.getElementById('habitId').value;
+      const name = document.getElementById('habitName').value.trim();
+      if (!name) return;
+
+      const habit = habits.find(h => h.id === id);
+      if (habit) {
+        habit.name = name;
+        habit.emoji = selectedEmoji;
+      } else {
+        habits.push({ id: Date.now().toString(), name, emoji: selectedEmoji, createdAt: todayKey(), log: {} });
+      }
+      saveHabits();
+      closeHabitModal();
+    }
+
+    function deleteHabit(id) {
+      const habit = habits.find(h => h.id === id);
+      if (!habit) return;
+      pendingDeleteId = id;
+      document.getElementById('confirmText').textContent = `"${habit.name}" and its whole history will be removed.`;
+      document.getElementById('confirmModal').hidden = false;
+    }
+
+    function closeConfirm() {
+      pendingDeleteId = null;
+      document.getElementById('confirmModal').hidden = true;
+    }
+
+    function confirmDelete() {
+      habits = habits.filter(h => h.id !== pendingDeleteId);
+      expandedHabits.delete(pendingDeleteId);
+      closeConfirm();
+      saveHabits();
+    }
+
+    // ---- Resumo do topo ----
+    function renderSummary() {
+      const now = new Date();
+      const hour = now.getHours();
+      const part = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+      const key = todayKey();
+      const doneToday = habits.filter(h => h.log[key]).length;
+      const left = habits.length - doneToday;
+      const tasksDone = tasks.filter(t => statusOf(t) === 'done').length;
+      const inProgress = tasks.filter(t => statusOf(t) === 'in-progress').length;
+      const topStreak = habits.reduce((m, h) => Math.max(m, currentStreak(h)), 0);
+
+      document.getElementById('todayLabel').textContent = now.toLocaleDateString('en', { weekday: 'long', month: 'long', day: 'numeric' });
+      document.getElementById('greeting').innerHTML = `${part}. <em>Grow a little</em> today.`;
+
+      let line = 'Tick a habit and a flower grows in your garden.';
+      if (habits.length && !left) line = 'Every habit is done today. Your garden is in full bloom. 🌸';
+      else if (habits.length) line = `${left} habit${left === 1 ? '' : 's'} left today, ${inProgress} task${inProgress === 1 ? '' : 's'} in progress.`;
+      document.getElementById('introLine').textContent = line;
+
+      const stats = [
+        { emoji: '🌼', value: `${doneToday}/${habits.length}`, label: 'Habits today' },
+        { emoji: '🔥', value: topStreak, label: 'Top streak' },
+        { emoji: '✅', value: `${tasksDone}/${tasks.length}`, label: 'Tasks done' },
+      ];
+      document.getElementById('stats').innerHTML = stats.map(s => `
+        <div class="stat"><span class="stat-emoji" aria-hidden="true">${s.emoji}</span>
+          <div><div class="stat-value">${s.value}</div><div class="stat-label">${s.label}</div></div>
+        </div>`).join('');
+    }
+
+    // ---- Confetti ----
+    function celebrate(emojis) {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      for (let i = 0; i < 22; i++) {
+        const el = document.createElement('span');
+        el.className = 'confetti';
+        el.textContent = emojis[i % emojis.length];
+        el.style.left = Math.random() * 100 + 'vw';
+        el.style.setProperty('--dx', (Math.random() * 200 - 100) + 'px');
+        el.style.setProperty('--rot', (Math.random() * 720 - 360) + 'deg');
+        el.style.setProperty('--dur', (1.2 + Math.random() * 1.3) + 's');
+        el.style.animationDelay = Math.random() * .3 + 's';
+        document.body.appendChild(el);
+        el.addEventListener('animationend', () => el.remove());
+      }
+    }
+
+    // ---- Teclado: Enter salva, Esc fecha ----
+    document.addEventListener('keydown', ev => {
+      const actions = {
+        modal: [closeModal, addTask],
+        editModal: [closeEditModal, saveEditedTask],
+        habitModal: [closeHabitModal, saveHabit],
+        confirmModal: [closeConfirm, confirmDelete],
+      };
+      const open = Object.keys(actions).find(id => !document.getElementById(id).hidden);
+      if (!open) return;
+      const [close, submit] = actions[open];
+      if (ev.key === 'Escape') close();
+      if (ev.key === 'Enter' && ev.target.tagName === 'INPUT' && ev.target.id !== 'habitEmojiCustom') { ev.preventDefault(); submit(); }
+    });
+
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateToggleIcon);
+
     // Initial render
+    updateToggleIcon();
+    renderColumns();
     renderTasks();
+    renderHabits();
+    renderSummary();
   </script>
 </body>
 </html>
