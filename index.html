@@ -995,6 +995,20 @@
       return streak;
     }
 
+    // Frequência: dias feitos nos últimos 30 dias, sem contar hoje (assim a lista não pula ao marcar)
+    const FREQ_WINDOW = 30;
+    function recentFrequency(habit) {
+      let count = 0;
+      for (let i = 1; i <= FREQ_WINDOW; i++) if (habit.log[dayKey(addDays(new Date(), -i))]) count++;
+      return count;
+    }
+
+    // Hábitos mais frequentes primeiro; empate mantém a ordem de criação
+    function habitsByPriority() {
+      const freq = new Map(habits.map(h => [h.id, recentFrequency(h)]));
+      return [...habits].sort((a, b) => freq.get(b.id) - freq.get(a.id));
+    }
+
     function bestStreak(habit) {
       const keys = Object.keys(habit.log).filter(k => habit.log[k]).sort();
       let best = 0, run = 0, prev = null;
@@ -1035,7 +1049,7 @@
         garden.innerHTML = `<div class="garden-empty">🌱 Your garden is empty. Add a habit to plant the first seed.</div>`;
         return;
       }
-      garden.innerHTML = habits.map(h => `
+      garden.innerHTML = habitsByPriority().map(h => `
         <button class="plot" onclick="toggleHabit('${escapeHtml(h.id)}')" title="${escapeHtml(h.name)}"
                 aria-label="${escapeHtml(h.name)}: ${h.log[key] ? 'done today' : 'not done yet'}">
           ${h.log[key]
@@ -1099,7 +1113,7 @@
         return;
       }
 
-      list.innerHTML = habits.map(h => {
+      list.innerHTML = habitsByPriority().map(h => {
         const done = !!h.log[key];
         const streak = currentStreak(h);
         const best = bestStreak(h);
